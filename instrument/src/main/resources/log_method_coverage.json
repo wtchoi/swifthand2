@@ -1,0 +1,47 @@
+{
+  "types" : { },
+  "specs" : [
+    {
+      "spec-type" : "exclude",
+      "packages" : [
+        "android.support",
+        "org.apache",
+        "com.android",
+        "com.google",
+        "com.actionbarsherlock",
+        "se.emilsjolander",
+        "com.amazon.device.iap",
+        "com.nokia.payment.iap",
+        "com.itextpdf",
+        "com.github.mikephil.charting",
+        "org.acra",
+        "oauth.signpost",
+        "org.achartengine",
+        "roboguice",
+        "org.roboguice",
+        "com.j256.ormlite",
+        "com.fasterxml.jackson",
+        "com.box.boxjavalibv2",
+        "com.crashlytics.android.core",
+        "net.sourceforge.zbar",
+        "com.wdullaer.materialdatetimepicker",
+        "com.mdimension.jchronic",
+        "kotlin",
+        "org.joda.time.chrono",
+        "com.dropbox",
+        "com.facebook",
+        "bolts",
+        "android.databinding",
+        "com.telly.groundy",
+        "org.bouncycastle"
+      ],
+      "all-class" : "true",
+      "all-method" : "true"
+    },
+    {
+      "spec-type" : "include",
+      "all-class" : "true",
+      "all-method" : "true"
+      }
+  ]
+}

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html style="height:98%;">
+
+<head>
+<script src="https://cdn.jsdelivr.net/jquery/2.1.4/jquery.min.js"></script>
+<!-- JS -->
+<script>
+$(document).ready(function(){
+    var SUBVIEW_LOG = 0;
+    var SUBVIEW_STAT = 1;
+    var SUBVIEW_HISTORY = 2;
+    var SUBVIEWS = ["log", "stat", "history"];
+
+    var currentPosition = 1;
+    var subview  = 0;
+    var scaleMin = 0;
+    var scaleMax = 8;
+    var scale = 5;
+    var scaleFactor = [0.2, 0.3, 0.4, 0.6, 0.8, 1, 1.5, 2 ,3];
+    var scaleWrap = ["500%", "333%", "250%", "165%", "125%", "100%", "66%", "50%", "33%"];
+
+    var modelPrefix = "image/model";
+    var imagePrefix = "image/screen"
+    var logPrefix = "image/log";
+    var statPrefix = "image/stat";
+    var postfix = "a";
+
+    function moveToCurrentPosition() {
+        $("#pos").text(currentPosition);
+
+        $("#poststate").attr("src", modelPrefix + currentPosition + postfix + ".svg");
+
+        // handle tab
+        var src_prefix;
+        if (subview == SUBVIEW_LOG) {
+            $("#subview").attr("src", logPrefix + currentPosition + ".html");
+        }
+        else if (subview == SUBVIEW_STAT) {
+            $("#subview").attr("src", statPrefix + currentPosition + ".html");
+        }
+        else {
+            $("#subview").attr("src", imagePrefix + currentPosition + ".png");
+        }
+
+        var tablinks = $(".tablinks").removeClass("active");
+        var tab_name = "#" + SUBVIEWS[subview] + "_tab";
+        $(tab_name).addClass("active");
+
+        // adjust focus
+        $("#target").focus();
+    }
+
+    function moveToPrevPosition() {
+        if(currentPosition > 1) currentPosition--;
+        moveToCurrentPosition();
+    }
+
+    function moveToNextPosition() {
+        currentPosition++;
+        moveToCurrentPosition();
+    }
+
+    function isNaturalNumber (str) {
+        var pattern = /^(0|([1-9]\d*))$/;
+        return pattern.test(str);
+    }
+
+    function zoomInDiagram() {
+        if (scale == scaleMax) return;
+        scale++;
+        scaleDiagram();
+    }
+
+    function zoomOutDiagram() {
+        if (scale == scaleMin) return;
+        scale--;
+        scaleDiagram();
+    }
+
+    function scaleDiagram() {
+       var iframe = $("#poststate");
+        iframe.css("height", scaleWrap[scale]);
+        iframe.css("width", scaleWrap[scale]);
+        iframe.css("-webkit-transform", "scale(" + scaleFactor[scale] +")");
+    }
+
+    $("#prev").click(moveToPrevPosition);
+    $("#post").click(moveToNextPosition);
+    $(document).keydown( function(event) {
+        if (event.which == '37') { moveToPrevPosition(); } // left key
+        if (event.which == '39') { moveToNextPosition(); } // right key
+        if (event.which == '189') { zoomOutDiagram(); } // - key
+        if (event.which == '187' && event.shiftKey) { zoomInDiagram(); } // + key
+        if (event.which == '9') {
+            subview++;
+            if (subview == SUBVIEWS.length) subview = 0;
+            moveToCurrentPosition();
+        }
+    });
+
+    $("#jump").submit(function() {
+        var target = $("#target").val();
+        console.log(target);
+        if (isNaturalNumber(target)) {
+            currentPosition = target;
+            moveToCurrentPosition();
+        }
+        $("#target").val("");
+        return false;
+    });
+
+    $("#in").click(zoomInDiagram);
+    $("#out").click(zoomOutDiagram);
+
+    $("#A").click(function() {
+        postfix = "a"
+        moveToCurrentPosition();
+    });
+
+    $("#B").click(function() {
+        postfix = "b"
+        moveToCurrentPosition();
+    });
+
+    $("#log_tab").click(function(event) {
+        subview = SUBVIEW_LOG;
+        moveToCurrentPosition();
+    });
+
+    $("#stat_tab").click(function(event) {
+        subview = SUBVIEW_STAT;
+        moveToCurrentPosition();
+    });
+
+    $("#history_tab").click(function(event) {
+        subview = SUBVIEW_HISTORY;
+        moveToCurrentPosition();
+    });
+
+    moveToCurrentPosition();
+});
+</script>
+
+<!-- CSS -->
+<style type="text/css">
+    /* subview tab style */
+    ul.tab {
+        list-style-type: none;
+        margin:0;
+        padding:0;
+        overflow: hidden;
+        border: 1px solid #ccc;
+        background-color: #f1f1f1;
+    }
+    ul.tab li { float:left; }
+    ul.tab li a {
+        display: inline-block;
+        color:black;
+        text-align: center;
+        text-decoration: none;
+        padding: 14px 16px;
+    }
+    ul.tab li a:hover {background-color: #ddd;}
+    ul.tab li a:focus, .active {background-color: #ccc;}
+</style>
+</head>
+
+<body style="height:100%;">
+<div id="main" style="height:100%; border: 0px;">
+<table id="layout" width="100%" style="height:100%;" border="solid">
+    <tr>
+        <!-- main window -->
+        <td width="60%" style="height:100%;">
+            <div style="overflow:hidden; height:100%; width:100%">
+            <iframe id="poststate" style="width:100%; -webkit-transform:scale(1); -webkit-transform-origin: 0 0; height:100%;" src=""></iframe>
+            </div>
+        </td>
+
+        <!-- sub window -->
+        <td width="40%">
+            <table width="100%" style="height:100%" border="solid">
+                <!-- tab -->
+                <tr style="height:50px;"><td>
+                    <ul class="tab" style="overflow:hidden">
+                        <li><a id="log_tab" href="#" class="tablinks">Log</a></li>
+                        <li><a id="stat_tab" href="#" class="tablinks">Stat</a></li>
+                        <li><a id="history_tab" href="#" class="tablinks">History</a></li>
+                    </ul>
+                </td></tr>
+                <!-- tab contents -->
+                <tr><td>
+                    <iframe id="subview" style="width:100%; height:100%;" src=""></iframe>
+                </td></tr>
+                <!-- navigation -->
+                <tr style="height:50px;">
+                    <td><table id="navigation"><tr>
+                        <td style="align-content: center">
+                            <button id="in">+</button>
+                            <button id="out">-</button>
+                            <button id="prev"><--</button>
+                            <span id="pos">undefined</span>
+                            <button id="post">--> </button>
+                            <button id="A">A</button>
+                            <button id="B">B</button>
+                        </td>
+                        <td>
+                            <form  id="jump">
+                            <input id="target"/>
+                            <button>Jump</button>
+                        </form>
+                        </td>
+                    </tr></table></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</div>
+</body>
+</html>

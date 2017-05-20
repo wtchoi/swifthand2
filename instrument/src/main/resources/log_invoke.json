@@ -1,0 +1,18 @@
+{
+  "types" : {
+    "Intent": "android.content.Intent"
+  },
+  "specs" : [
+    { "spec-type" : "include",
+      "class" : "android.app.Activity",
+      "methods" : [
+        {"name":"startActivity",
+          "signatures":[
+            ["Intent"],
+            ["Intent", "_"]]},
+        {"name":"startActivityForResult",
+          "signatures":[
+            ["Intent", "_"],
+            ["Intent", "_", "_"]]}]}
+  ]
+}

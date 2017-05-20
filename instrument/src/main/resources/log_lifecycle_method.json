@@ -1,0 +1,40 @@
+{
+  "types" : {
+    "Intent": "android.content.Intent"
+  },
+  "specs" : [
+    {
+      "spec-type" : "include",
+      "class" : "android.app.Activity",
+      "methods" : [
+        {"name":"onCreate",
+          "signatures":[["_"]],
+          "populate":"true"
+        },
+        {"name":"onStart",
+          "signatures":[[]],
+          "populate":"true"
+        },
+        {"name":"onResume",
+          "signatures":[[]],
+          "populate":"true"
+        },
+        {"name":"onRestart",
+          "signatures":[[]],
+          "populate":"true"
+        },
+        {"name":"onPause",
+          "signatures":[[]],
+          "populate":"true"
+        },
+        {"name":"onStop",
+          "signatures":[[]],
+          "populate":"true"
+        },
+        {"name":"onDestroy",
+          "signatures":[[]],
+          "populate":"true"
+        }
+      ]}
+  ]
+}

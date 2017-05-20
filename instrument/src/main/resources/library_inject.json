@@ -1,0 +1,6 @@
+[
+  "smarthand.logger.Logger",
+  "smarthand.logger.LogProxy",
+  "smarthand.dynamic.coverage.Coverage",
+  "smarthand.dynamic.coverage.CoverageProxy"
+]
