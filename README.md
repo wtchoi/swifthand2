@@ -1,4 +1,4 @@
-# SmartHand
+# SwiftHand2
 
 A GUI testing framework
 
@@ -25,8 +25,8 @@ export PATH=$PATH:$ANDROID_HOME/platform_tools:$ANDROID_HOME/tools
 Similarly, <ANDROID_HOME> should be the path to the root directory of Android SDK.
 
 
-### Step 2: Getting SmartHand
-You need to download SmartHand from the repository. You also need to make few shell scripts executable:
+### Step 2: Getting SwiftHand2
+You need to download SwiftHand2 from the repository. You also need to make few shell scripts executable:
 ```
 chmod 700 instrument.sh
 chmod 700 signing.sh
@@ -35,7 +35,7 @@ chmod 700 run_driver.sh
 chmod 700 run_explorer.sh
 ```
 
-You also need to compile SmartHand.
+You also need to compile SwiftHand2.
 ```
 mvn package
 ```
@@ -68,7 +68,7 @@ To begin with, you need to preprocess a target application. You can use one of a
 
 This command analyzes and instruments the target application **anymemo_10.7.1.apk**.
 The instrumentation result will be stored in **apps/inst/anymemo_10.7.1.apk** directory.
-Preprocessing make take few minutes.
+Preprocessing may take few minutes.
 
 
 ###### UI Testing
@@ -88,12 +88,12 @@ To use a different algorithm,
 try **random** or **sh2** (a variation of SwiftHand algorithm)
 instead of **sh**.
 
-SmartHand generates log files.
+SwiftHand2 generates log files.
 The running example emits logs to *output/anymemo/sh/log/explorer.log*.
 While UI testing is running, you can use *tail* command line tool to get a live view of the logfile.
 For example:
 ```
-tail -f output/anymemo_10.7.1.apk/log/explorer.log
+tail -f output/anymemo/sh/log/explorer.log
 ```
 
 ###### Test Suite Reduction
@@ -106,8 +106,8 @@ This can be done in three steps. The first step is to stabilize the original exe
 ./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/stabilized <DEVICE ID> 9090 240 sequence-stabilize 1 output/anymemo/sh/trace.json
 ```
 
-The example command reexcute the trace recorded in the given trace file (trace.json) and remove non-replayable parts of the trace.  
-Note we are using 240 seconds for time out.
+The example command reexcute the trace recorded in the given trace file (trace.json) and remove non-replayable parts of the trace. 
+Note we are using 240 seconds for time out. 
 The result of removing non-replayable parts will be stored in *output/anymemo/stabilized/minimized_trace.json* file.
 A single pass of stabilization might not be enough to fully stabilize the trace. We recommend to repeat this step 3 to 5 times.
 Once the trace has been stabilized, one can use two reduction steps: *eliminate-loop* and *splicing*.

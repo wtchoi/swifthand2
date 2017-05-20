@@ -92,7 +92,7 @@ public class Client implements Logger {
     }
 
     int port = Integer.parseInt(Options.get(Options.Keys.PORT));
-    uiBridge.start(2000, port);
+    uiBridge.start(15000, port);
     int waitCounter = 0;
 
     boolean explicitCloseRequested = false;
@@ -249,7 +249,7 @@ public class Client implements Logger {
         Util.sleep(500);
         resetApp(targetApkInfo);
         uiBridge.sendEvent("launch:" + launchMode + ":" + targetApkInfo.appPackage);
-        Util.sleep(2000);
+        Util.sleep(15000);
         getTimingFromDevice();
         counterAfterLastReset = 0;
       }
