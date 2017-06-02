@@ -38,7 +38,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>${env.ANDROID_HOME}/build-tools/23.0.3/dx</executable>
+              <executable>${env.ANDROID_BUILD_TOOL}/dx</executable>
               <arguments>
                 <argument>--dex</argument>
                 <argument>--output=${project.build.directory}/${project.build.finalName}.dex.jar</argument>
