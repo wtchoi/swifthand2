@@ -31,8 +31,6 @@ You need to download SwiftHand2 from the repository. You also need to make few s
 chmod 700 instrument.sh
 chmod 700 signing.sh
 chmod 700 run.sh
-chmod 700 run_driver.sh
-chmod 700 run_explorer.sh
 ```
 
 You also need to compile SwiftHand2.
