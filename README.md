@@ -9,7 +9,7 @@ Please install following packages. You can use a package manager,
 such as **apt-get** or **brew**, to install Maven, expect, and bash.
 
 - [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
-- [Android SDK](http://developer.android.com/sdk/index.html#downloads) (latest)
+- [Android SDK](http://developer.android.com/sdk/index.html#downloads) (recommend Android Studio)
 - [Maven](https://maven.apache.org/download.cgi)
 - [expect](http://www.nist.gov/el/msid/expect.cfm)
 - [bash](https://www.gnu.org/software/bash/)
@@ -25,7 +25,8 @@ export PATH=$PATH:$ANDROID_HOME/platform_tools:$ANDROID_HOME/tools
 <JAVA_HOME> should be the path to the root directory of JDK.
 Similarly, <ANDROID_HOME> should be the path to the root directory of Android SDK. 
 If you installed Android SDK as a part of Android Studio in OSX, <ANDROID_HOME> will be 
-*/Users/<id>/Library/Android/sdk*.
+/Users/<LOGIN>/Library/Android/sdk, where
+<LOGIN> is replaced by your login id.
 <VERSION> should be the version number of the Android build-tool installed in your system.
 You can check it by looking at the <ANDROID_HOME>/build-tools directory.
 
