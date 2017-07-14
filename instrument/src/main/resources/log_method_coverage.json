@@ -19,21 +19,7 @@
         "org.achartengine",
         "roboguice",
         "org.roboguice",
-        "com.j256.ormlite",
-        "com.fasterxml.jackson",
-        "com.box.boxjavalibv2",
-        "com.crashlytics.android.core",
-        "net.sourceforge.zbar",
-        "com.wdullaer.materialdatetimepicker",
-        "com.mdimension.jchronic",
-        "kotlin",
-        "org.joda.time.chrono",
-        "com.dropbox",
-        "com.facebook",
-        "bolts",
-        "android.databinding",
-        "com.telly.groundy",
-        "org.bouncycastle"
+        "com.j256.ormlite"
       ],
       "all-class" : "true",
       "all-method" : "true"
@@ -42,6 +28,6 @@
       "spec-type" : "include",
       "all-class" : "true",
       "all-method" : "true"
-      }
+    }
   ]
 }

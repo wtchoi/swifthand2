@@ -45,9 +45,11 @@ public class PlanningStrategy extends Strategy {
     public void reportExecution(DeviceInfo deviceInfo, Coverage coverage, boolean escaped, boolean blocked) {
         prevAbs = currAbs;
 
-        String currentActivity = (deviceInfo.activityStack.size() == 0)
-                ? "null"
-                : deviceInfo.activityStack.getLast();
+        //String currentActivity = (deviceInfo.activityStack.size() == 0)
+        //        ? "null"
+        //        : deviceInfo.activityStack.getLast();
+        String currentActivity = deviceInfo.focusedActivity;
+        if (currentActivity == null) currentActivity = "null";
 
         currAbs = (escaped || blocked)
                 ? AbstractUI.getFailState()
@@ -107,7 +109,7 @@ public class PlanningStrategy extends Strategy {
                     log("Expected key: " + AbstractUI.getStateById(expectedAbsUid).getKey());
                     log("Expected activity: " + AbstractUI.getStateById(expectedAbsUid).getActivityName());
                     log("Available key: " + currAbs.getKey());
-                    log("Available activity: " + currAbs.getKey());
+                    log("Available activity: " + currAbs.getActivityName());
 
                     deviationFlag = true;
                     deviationCount++;
@@ -152,7 +154,7 @@ public class PlanningStrategy extends Strategy {
                 plan.addLast(C.WILDCARD);
                 deviationFlag = false;
             }
-            else if (lastAction == C.CLOSE) {
+            else if (lastAction.equals(C.CLOSE)) {
                 plan = new LinkedList<>();
                 plan.addLast(C.WILDCARD);
                 plan.addLast(C.START);
@@ -187,13 +189,8 @@ public class PlanningStrategy extends Strategy {
     public void intermediateDump(int id) {
         HistoryManager hm = HistoryManager.instance();
         hm.periodStat("PlanningStrategy:#Deviation", deviationCount);
-        hm.periodStat("PlanningStrategy:#Screen", currentCoverage.screenCoverage.size());
-        hm.periodStat("PlanningStrategy:#Branch", currentCoverage.branchCoverage.size());
-        hm.periodStat("PlanningStrategy:#Method", currentCoverage.methodCoverage.size());
-
-        hm.periodStat("PlanningStrategy:Mini:#Screen", currentMiniCoverage.screenCoverage.size());
-        hm.periodStat("PlanningStrategy:Mini.#Branch", currentMiniCoverage.branchCoverage.size());
-        hm.periodStat("PlanningStrategy:Mini.#Method", currentMiniCoverage.methodCoverage.size());
+        dumpCoverage("PlanningStrategy", currentCoverage);
+        dumpCoverage("PlanningStrategy:Mini", currentMiniCoverage);
         planner.intermediateDump(id);
     }
 

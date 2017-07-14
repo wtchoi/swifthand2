@@ -3,7 +3,6 @@ package smarthand.ui_explorer;
 import org.json.JSONObject;
 import smarthand.ui_explorer.strategy.*;
 import smarthand.ui_explorer.strategy.random.RandomStrategy;
-import smarthand.ui_explorer.strategy.refinement.VRFStrategy;
 import smarthand.ui_explorer.strategy.regression.LoopEliminationPlanner;
 import smarthand.ui_explorer.strategy.regression.RecomposingPlanner;
 import smarthand.ui_explorer.strategy.regression.ReplayPlanner;
@@ -90,13 +89,25 @@ public class CommandLine {
         String path;
         switch (strategy) {
             case "random":
-                c.strategy = new RandomStrategy(false);
+                c.strategy = new RandomStrategy(false, false);
+                break;
+            case "smart-random":
+                c.strategy = new RandomStrategy(false, true);
                 break;
             case "sh":
-                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Non);
+                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Non, false, false);
                 break;
             case "sh2":
-                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Strict);
+                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Strict, false, false);
+                break;
+            case "sh-r":
+                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Non, true, false);
+                break;
+            case "sh2-r":
+                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Strict, true, false);
+                break;
+            case "lstar":
+                c.strategy = new STMLStrategy(STMLStrategy.ExtrapolationOptions.Non, true, true);
                 break;
             case "replay-ui":
                 c.strategy = (new MBRTStrategyConstructor())
@@ -128,20 +139,17 @@ public class CommandLine {
                         //.addOption(MBRTStrategy.StrategyOption.SkipUICheck)
                         .create(args[8]);
                 break;
-            case "refinement":
-                c.strategy = new VRFStrategy();
-                break;
             case "sequence-replay":
                 c.strategy = new PlanningStrategy(new ReplayPlanner(args[8], 1, false));
                 break;
             case "sequence-stabilize":
-                c.strategy = new PlanningStrategy(new ReplayPlanner(args[8], 1, true));
+                c.strategy = new PlanningStrategy(new ReplayPlanner(args[8], Integer.parseInt(args[9]), true));
                 break;
             case "eliminate-loop":
-                c.strategy = new PlanningStrategy(new LoopEliminationPlanner(args[8], 6));
+                c.strategy = new PlanningStrategy(new LoopEliminationPlanner(args[8], Integer.parseInt(args[9])));
                 break;
             case "splicing":
-                c.strategy = new PlanningStrategy(new RecomposingPlanner(args[8], 6, Integer.parseInt(args[9])));
+                c.strategy = new PlanningStrategy(new RecomposingPlanner(args[8], Integer.parseInt(args[9]), Integer.parseInt(args[10])));
                 break;
             case "sampling":
                 c.strategy = new PlanningStrategy(new SamplingPlanner(args[8], 3, Integer.parseInt(args[9]), Integer.parseInt(args[10])));

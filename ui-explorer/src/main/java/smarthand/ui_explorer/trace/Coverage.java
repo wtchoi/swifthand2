@@ -100,4 +100,24 @@ public class Coverage {
         HashSet<Integer> ms = Util.setIntersect(a.screenCoverage, b.screenCoverage);
         return new Coverage(mm, mb, ms);
     }
+
+    public int getBranchCount() {
+        int count = 0;
+        for (Integer x: branchCoverage) {
+            if (x<10000000) count = count+1;
+        }
+        return count;
+    }
+
+    public int getExceptionCount() {
+        int count = 0;
+        for (Integer x: branchCoverage) {
+            if (x>=10000000) count = count + 1;
+        }
+        return count;
+    }
+
+    public void addCrash() {
+        this.methodCoverage.add(10000000);
+    }
 }

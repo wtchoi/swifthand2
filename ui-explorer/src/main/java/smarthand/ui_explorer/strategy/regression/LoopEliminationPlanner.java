@@ -73,6 +73,11 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
         addAlternative(failingPrefix, resultingTrace);
     }
 
+    @Override
+    public Coverage getAlreadyCovered() {
+        return new Coverage(confirmedCoverage);
+    }
+
     private void addAlternative(LinkedList<Integer> plan, Trace counterExample) {
         if (plan.size() > 3) {
             Trace prefixTrace = counterExample.getSubtrace(0, (counterExample.size() - 1));
@@ -255,6 +260,7 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
         Coverage expectedGain = null;
         LinkedList<LinkedList<Integer>> plans = null;
         LinkedList<Integer> originalPlan = null;
+        LinkedList<Coverage> coverages = new LinkedList<>();
 
         public LinkedList<LinkedList<Integer>> buildPlans(Trace sequence) {
             originalPlan = PlanUtil.traceToPlan(sequence);
@@ -264,6 +270,15 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
             log("expectedGain : " + expectedGain.size() );
 
             plans = new LinkedList<>();
+
+            // register original plan
+            Expectation e = new Expectation();
+            e.c = Coverage.add(expectedGain, confirmedCoverage);
+            e.original = true;
+            e.originalPlan = originalPlan;
+            plans.add(originalPlan);
+            expectations.put(originalPlan, e);
+            coverages.addLast(e.c);
 
             LinkedList plan = new LinkedList();
             plan.addLast(sequence.get(0).abstractUI.id());
@@ -304,10 +319,20 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
 
                     if (!possiblyNondeterministic) {
                         printIntSet(result, "register", LoopEliminationPlanner.this);
-                        plans.add(result);
 
                         Expectation e = new Expectation();
-                        e.c = new Coverage(assumedCoverage);
+                        for (Coverage pc: coverages) {
+                            if (pc.equals(assumedCoverage)) {
+                                e.c = pc;
+                                break;
+                            }
+                        }
+                        if (e.c == null) {
+                            e.c = new Coverage(assumedCoverage);
+                            coverages.addLast(e.c);
+                        }
+
+                        plans.add(result);
                         e.original = PlanUtil.equalsExceptLast(result, originalPlan);
                         e.originalPlan = originalPlan;
                         expectations.put(result, e);
@@ -333,6 +358,7 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
                 updatedCoverage.add(s.methodCoverage, s.branchCoverage, s.abstractUI.id());
             }
 
+            boolean mustSkip = false;
             //Handling cycle
             {
                 int cycleEnd = index;
@@ -366,6 +392,9 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
                     if (cycleEnd > index) {
                         //skip cycle
                         buildPlans(sequence, cycleEnd, nextCoverage, nextPlan, true);
+                        if (cycleEnd - index == 1) {
+                            mustSkip = true;
+                        }
                     } else {
                         //skip tail
                         // plan without tail
@@ -391,10 +420,12 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
                 }
             }
 
-            if (justSkipCycle) {
-                buildPlans(sequence, index + 1, assumedCoverage, planPrefix, false);
-            } else {
-                buildPlans(sequence, index + 1, updatedCoverage, updatedPlan, false);
+            if (!mustSkip) {
+                if (justSkipCycle) {
+                    buildPlans(sequence, index + 1, assumedCoverage, planPrefix, false);
+                } else {
+                    buildPlans(sequence, index + 1, updatedCoverage, updatedPlan, false);
+                }
             }
         }
     }
@@ -406,20 +437,17 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
 
     @Override
     public void intermediateDump(int id) {
+        super.intermediateDump(id);
+
         HistoryManager hm = HistoryManager.instance();
 
         hm.periodStat("Replay:#TrueDeviation", trueDeviationCount);
-        hm.periodStat("Replay:#Screen", currentCoverage.screenCoverage.size());
-        hm.periodStat("Replay:#Branch", currentCoverage.branchCoverage.size());
-        hm.periodStat("Replay:#Method", currentCoverage.methodCoverage.size());
+
+        dumpCoverage("Replay", currentCoverage);
 
         Coverage trialGain = Coverage.minus(currentCoverage, confirmedCoverage);
-        hm.periodStat("Replay:Plan:Mini:Trial:#Method", trialGain.methodCoverage.size());
-        hm.periodStat("Replay:Plan:Mini:Trial:#Branch", trialGain.branchCoverage.size());
-
-        hm.periodStat("Replay:Confirmed:#Screen", confirmedCoverage.screenCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Branch", confirmedCoverage.branchCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Method", confirmedCoverage.methodCoverage.size());
+        dumpCoverage("Replay:Plan:Mini:Trial", trialGain);
+        dumpCoverage("Replay:Confirmed", confirmedCoverage);
 
         hm.periodStat("Replay:Plan:Mini:#Trials.", trialCount);
         hm.periodStat("Replay:Plan:Mini:#Skipped Candidates", skippedCandidateCount);
@@ -434,9 +462,7 @@ public class LoopEliminationPlanner extends TraceBasedPlanner {
         hm.periodStat("Replay:Plan:#Dropped Seq.:Wrong Init", dropCountWrongInit);
         hm.periodStat("Replay:Plan:#Dropped Seq.:Possible ND", dropCountPossibleND);
 
-        hm.periodStat("Trace:#Screen", inputTraceCoverage.screenCoverage.size());
-        hm.periodStat("Trace:#Branch", inputTraceCoverage.branchCoverage.size());
-        hm.periodStat("Trace:#Method", inputTraceCoverage.methodCoverage.size());
+        dumpCoverage("Trace", inputTraceCoverage);
         hm.periodStat("Trace:#Event", inputTraceProfiler.events);
         hm.periodStat("Trace:#Seq.", inputTraceProfiler.traces);
     }

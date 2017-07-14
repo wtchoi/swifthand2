@@ -1,6 +1,5 @@
 package smarthand.ui_explorer.strategy.swifthand;
 
-import org.json.JSONObject;
 import smarthand.ui_explorer.*;
 import smarthand.ui_explorer.Strategy;
 import smarthand.ui_explorer.trace.*;
@@ -63,11 +62,17 @@ public class STMLStrategy extends Strategy {
     HashSet<Model.ModelState> monkeyFrontiers = new HashSet<>();
     HashSet<PTA.PTAState> monkeyCovered = new HashSet<>();
 
+    boolean restartAfterEveryGoal = true;
+    boolean conservativeMerging = false;
+    HashMap<Integer, TreeSet<LinkedList<Integer>>> observationRequirementTable = new HashMap<>();
+    HashSet<Model.ModelState> identifiedStates = new HashSet<>();
+
     boolean useHybridMode = false;
     Phase testingPhase = Phase.Explore;
     long explorationStartTime = 0;
     long explorationBudget = 3600000;//120000; //milliseconds
     long monkeyBudget = 10000;//60000; //milliseconds
+
 
     // stats
     int DPlanCount = 0;
@@ -78,6 +83,9 @@ public class STMLStrategy extends Strategy {
     int crashCount = 0;
     int resetCount = 0;
     int monkeyCount = 0;
+
+    long previousTick = 0;
+    long timeSpentOnReset = 0;
 
     // constants
     static Integer CLOSE = 0;
@@ -98,13 +106,16 @@ public class STMLStrategy extends Strategy {
         rand = new Random(seed);
     }
 
-    public STMLStrategy(ExtrapolationOptions opt) {
+    public STMLStrategy(ExtrapolationOptions opt, boolean restartAfterEveryGoal, boolean conservativeMerging) {
         if (opt == ExtrapolationOptions.Strict) {
             extrapolation = new StrictExtrapolation(this);
         }
         if (extrapolation != null) {
             eDgreeMax = extrapolation.degree();
         }
+
+        this.restartAfterEveryGoal = restartAfterEveryGoal;
+        this.conservativeMerging = conservativeMerging;
     }
 
     @Override
@@ -134,9 +145,11 @@ public class STMLStrategy extends Strategy {
             eventCounter++;
         }
 
-        String currentActivity = (deviceInfo.activityStack.size() == 0)
-                ? "null"
-                : deviceInfo.activityStack.getLast();
+        //String currentActivity = (deviceInfo.activityStack.size() == 0)
+        //        ? "null"
+        //        : deviceInfo.activityStack.getLast();
+        String currentActivity = deviceInfo.focusedActivity;
+        if (currentActivity == null) currentActivity = "null";
 
         Boolean isKeyboardShown = deviceInfo.isKeyboardShown;
 
@@ -169,6 +182,8 @@ public class STMLStrategy extends Strategy {
             updateExtrapolation();
             lastTid = CLOSE;
             buildStartPlan();
+
+            previousTick = System.currentTimeMillis();
         }
         else {
             // Update trace, pta, model, and execution plan (must follow this order).
@@ -188,6 +203,11 @@ public class STMLStrategy extends Strategy {
             }
 
             updateExecutionPlan(uistate, escaped, blocked);
+
+            if (lastTid == CLOSE || lastTid == START) {
+                timeSpentOnReset += (System.currentTimeMillis() - previousTick);
+            }
+            previousTick = System.currentTimeMillis();
         }
 
         ConcreteUI currCui = ConcreteUI.getFromRawInfo(deviceInfo.appGuiTree, uistate);
@@ -274,17 +294,18 @@ public class STMLStrategy extends Strategy {
         hm.periodStat("Strategy:getName", getName());
         hm.periodStat("Strategy:Model:#Node", modelStat.countNode());
         hm.periodStat("Strategy:Model:#Edge", modelStat.countEdge());
+        hm.periodStat("Strategy:PTA:#Node", pta.countNode());
         if (extrapolation != null) {
             hm.periodStat("Strategy:Model:#Edge (real)", modelStat.countEdgeByGroup(0));
             hm.periodStat("Strategy:Model:#Edge (extrapolated)", modelStat.countEdgeByGroup(1));
         }
-        hm.periodStat("Strategy:Coverage:#Branch", currentCoverage.branchCoverage.size());
-        hm.periodStat("Strategy:Coverage:#Method", currentCoverage.methodCoverage.size());
-        hm.periodStat("Strategy:Coverage:#Screen", currentCoverage.screenCoverage.size());
+        dumpCoverage("Strategy:Coverage", currentCoverage);
+
         hm.periodStat("Strategy:Model:#Tran. (realized)", modelStat.countRealizedTransition());
         hm.periodStat("Strategy:Model:#Tran. (remaining)", modelStat.countUnrealizedTransition());
         hm.periodStat("Strategy:Model:#ND Tran.", modelStat.countNonDeterministicTransition());
         hm.periodStat("Strategy:Model:#ND Edge", modelStat.countNonDeterministicEdge());
+        hm.periodStat("Strategy:Model:PTA Size", pta.nextStateId);
         hm.periodStat("Strategy:Stat:#Recon.", reconstructionCount);
         hm.periodStat("Strategy:Stat:#Crash", crashCount);
         hm.periodStat("Strategy:Stat:#Reset", resetCount);
@@ -293,6 +314,7 @@ public class STMLStrategy extends Strategy {
         hm.periodStat("Strategy:Stat:Plan D", DPlanCount);
         hm.periodStat("Strategy:Stat:Plan ND", NDPlanCount);
         hm.periodStat("Strategy:Stat:ND Failure:", NDFailure);
+        hm.periodStat("Strategy:Stat:TimeSpentOnReset:", timeSpentOnReset);
     }
 
     private void updateExtrapolation() {
@@ -382,7 +404,7 @@ public class STMLStrategy extends Strategy {
         if (executedEventIndex != START) {
             HashSet<Model.ModelState> knownTargetStates = current.outTransitions[executedEventIndex];
             if (knownTargetStates != null) {
-                // Case 1: The resulting screen conforms to one of expected states
+                log("UpdateModel: checking existing observation");
                 for (Model.ModelState state : knownTargetStates) {
                     if (state.abstractUi == ptaCurrent.uistate) {
                         state.ptaStates.add(ptaCurrent);
@@ -410,14 +432,79 @@ public class STMLStrategy extends Strategy {
             // Case 3
             // Case 3-1: the transition is non-deterministic
             // Case 3-2: the transition is not observed before
-            Model.ModelState targetState = pickState(ptaCurrent);
-            current.addChild(targetState, executedEventIndex);
-            if (current.isClosed()) {
-                frontiers.remove(current);
-            }
+            log("UpdateModel: new observation");
+            if (!conservativeMerging) {
+                Model.ModelState targetState = pickState(ptaCurrent);
+                current.addChild(targetState, executedEventIndex);
+                if (current.isClosed()) {
+                    frontiers.remove(current);
+                }
 
-            prev = current;
-            current = targetState;
+                prev = current;
+                current = targetState;
+            }
+            else {
+                Model.ModelState targetState = model.createState(ptaCurrent);
+                current.addChild(targetState, executedEventIndex);
+
+                if (current.isClosed() && !identifiedStates.contains(current)) {
+                    boolean merged = false;
+                    frontiers.remove(current);
+
+                    log ("Try to merge model state " + current.id);
+                    for (Model.ModelState similarState: model.uiToStates.get(current.abstractUi.id())) {
+                        if (similarState == current) continue;
+                        if (!similarState.isClosed()) continue;
+                        log ("Candidate state: " + similarState.id);
+
+                        if (observationallyEqual(similarState, current)) {
+                            log ("State " + current.id  + " is merged to state: " + similarState.id);
+                            merged = true;
+                            Model.ModelState toRemove = current;
+
+                            for (Model.ModelState parent: current.parents) {
+                                for (int i=0;i<parent.abstractUi.getEventCount(); i++) {
+                                    if (parent.outTransitions[i] != null && parent.outTransitions[i].contains(current)) {
+                                        parent.outTransitions[i].remove(current);
+                                        parent.outTransitions[i].add(similarState);
+                                    }
+                                }
+                            }
+
+                            for (Model.ModelState child: similarState.outTransitions[executedEventIndex]) {
+                                if (child.abstractUi == ptaCurrent.uistate) {
+                                    prev = similarState;
+                                    current = child;
+                                    break;
+                                }
+                            }
+                            current.ptaStates.add(ptaCurrent);
+                            model.uiToStates.get(toRemove.abstractUi.id()).remove(toRemove);
+                            break;
+                        }
+                    }
+
+                    if (!merged) {
+                        identifiedStates.add(current);
+                        for (int i=0;i<current.outTransitions.length;i++) {
+                            if (current.outTransitions[i] != null && current.outTransitions[i].size() == 1) {
+                                for (Model.ModelState child: current.outTransitions[i]) {
+                                    if (child.isFailState()) continue;
+                                    log ("add to frontier (merging): " + child.id);
+                                    frontiers.add(child);
+                                    break;
+                                }
+                            }
+                        }
+                        prev = current;
+                        current = targetState;
+                    }
+                }
+                else {
+                    prev = current;
+                    current = targetState;
+                }
+            }
             log("UpdateModel: update model");
         }
         else {
@@ -425,6 +512,43 @@ public class STMLStrategy extends Strategy {
             current = getRoot(ptaCurrent);
             return;
         }
+    }
+
+    //assume m1.uistate == m2.uistate
+    private boolean observationallyEqual(Model.ModelState m1, Model.ModelState m2) {
+        AbstractUI abstractUI = m1.abstractUi;
+        for (int i=1;i<abstractUI.getEventCount(); i++) { //skip close event
+            if (m1.outTransitions[i] == null || m2.outTransitions[i] == null) continue;
+            if (m1.outTransitions[i].size() == 1 &&  m2.outTransitions[i].size() == 1) {
+                if (getElement(m1.outTransitions[i]).abstractUi != getElement(m2.outTransitions[i]).abstractUi) {
+                    log ("equality check failed : [" + i + "]");
+                    return false;
+                }
+            }
+        }
+
+        if (observationRequirementTable.containsKey(abstractUI.id())) {
+            TreeSet<LinkedList<Integer>> inputSequences = observationRequirementTable.get(abstractUI.id());
+            for (LinkedList<Integer> inputSequence : inputSequences) {
+                if (!checkEqualityOnInputSequence(m1, m2, inputSequence)) {
+                    log("equality check failed : " + Util.makeIntSetToString(inputSequence, ",", null).toString());
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean checkEqualityOnInputSequence(Model.ModelState m1, Model.ModelState m2, LinkedList<Integer> inputSequence) {
+        for (Integer action: inputSequence) {
+            if (m1.outTransitions[action] == null || m2.outTransitions[action] == null) return true;
+            if (m1.outTransitions[action].size() == 1 && m2.outTransitions[action].size() == 1) {
+                m1 = getElement(m1.outTransitions[action]);
+                m2 = getElement(m2.outTransitions[action]);
+                if (m1.abstractUi != m2.abstractUi) return false;
+            }
+        }
+        return true;
     }
 
     private Model.ModelState getRoot(PTA.PTAState ptaState) {
@@ -444,6 +568,7 @@ public class STMLStrategy extends Strategy {
 
         if (isNewUI && !state.isClosed()) {
             frontiers.add(state);
+            log ("add to frontier (pickState): " + state.id);
             if (!state.isFailState()) {
                 monkeyFrontiers.add(state);
             }
@@ -451,12 +576,22 @@ public class STMLStrategy extends Strategy {
         return state;
     }
 
+
     void reconstructModelBF() {
         reconstructionCount++;
 
         log("RECONSTRUCTION BEGIN!");
-        ModelConstructor learner = new ModelConstructor(this, false);
+        ModelConstructor learner = new ModelConstructor(this, false, conservativeMerging);
         learner.reconstruct(model);
+
+        //get merge counter example collected during the merge
+        for (Map.Entry<Integer, TreeSet<LinkedList<Integer>>> entry: learner.counterExamples.entrySet()) {
+            Integer uid = entry.getKey();
+            if (!observationRequirementTable.containsKey(uid)) {
+                observationRequirementTable.put(uid, new TreeSet<>(Util::compareIntegerList));
+            }
+            observationRequirementTable.get(uid).addAll(entry.getValue());
+        }
 
         // recompute prev and current
         log("RECONSTRUCT: recompute prev and current");
@@ -472,9 +607,26 @@ public class STMLStrategy extends Strategy {
         // reconstruct frontier set
         log("RECONSTRUCT: frontier");
         frontiers.clear();
-        for (Model.ModelState state: learner.redSet) {
-            if (!state.isClosed()) {
-                frontiers.add(state);
+        identifiedStates.clear();
+
+        if (!conservativeMerging) {
+            for (Model.ModelState state : learner.redSet) {
+                if (!state.isClosed()) {
+                    log ("add to frontier (reconstruct): " + state.id);
+                    frontiers.add(state);
+                }
+            }
+        }
+        else {
+            for (Model.ModelState state : learner.redSet) {
+                if (state.isClosed()) {
+                    identifiedStates.add(state);
+                    for (Set<Model.ModelState> children: state.outTransitions) {
+                        if (children != null && children.size() == 1 && !getElement(children).isClosed()) {
+                            frontiers.add(getElement(children));
+                        }
+                    }
+                }
             }
         }
 
@@ -641,7 +793,7 @@ public class STMLStrategy extends Strategy {
                 target = cur;
                 break;
             }
-            if (doubt()) {
+            if (!conservativeMerging && doubt()) {
                 boolean flag = false;
                 for (int i = 0; i < cur.abstractUi.getEventCount(); i++) {
                     if (CLOSE.equals(i)) continue;
@@ -721,6 +873,10 @@ public class STMLStrategy extends Strategy {
                 throw new RuntimeException();
             }
 
+            if (restartAfterEveryGoal) {
+                backTrace.push(CLOSE);
+                backTrace.push(WILDCARD);
+            }
             backTrace.push(eventIndex);
         }
         else { //phase == Phase.MONKEY
@@ -730,6 +886,7 @@ public class STMLStrategy extends Strategy {
         }
 
         backTrace.push(target.abstractUi.id());
+
         while (parentMapBFS.containsKey(target)) {
             backTrace.push(transitionMapBFS.get(target));
             target = parentMapBFS.get(target);
@@ -859,6 +1016,9 @@ public class STMLStrategy extends Strategy {
 
     private void printFrontiers() {
         printStateSet(frontiers, "Frontiers");
+        if (conservativeMerging) {
+            printStateSet(identifiedStates, "Identified");
+        }
     }
 
     private void printMonkeyFrontiers() {
@@ -902,5 +1062,15 @@ public class STMLStrategy extends Strategy {
     @Override
     public boolean requiresAutoRestart() {
         return false;
+    }
+
+    static private <T> T getElement(Collection<T> set) {
+        if (set.isEmpty()) return null;
+        T elt = null;
+        for (T t: set) {
+            elt = t;
+            break;
+        }
+        return elt;
     }
 }

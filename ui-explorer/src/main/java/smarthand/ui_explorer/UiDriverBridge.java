@@ -107,6 +107,7 @@ public class UiDriverBridge {
             out.flush();
             Util.sleep(10);
             UIDriverManager.stop();
+            LogcatManager.stop();
             Util.sleep(100);
             // isRunning = false;
         }
@@ -200,11 +201,40 @@ public class UiDriverBridge {
             }
         }
 
+        //get adb log
+        ret.logcat = LogcatManager.getLogs();
+        LinkedList<String> exceptionLog = LogcatManager.extractExceptionLogs(ret.logcat);
+        int temp = LogcatManager.registerExceptionLog(exceptionLog);
+        if (temp < 0) {
+            temp = -1 * temp;
+            if (temp < 0) temp = 1;
+        }
+        ret.logcatHash = (temp != 0) ? (temp % 10000000) + 10000000 : 0;
+
+        if (ret.logcatHash != 0) {
+            ret.coveredBranches.add(ret.logcatHash);
+            log("Client:EXCEPTION RAISED -------");
+            log("Client: Exception Code = " + ret.logcatHash);
+            for (String s: exceptionLog) { log("Client:Exception:" + s); }
+            log("Client:EXCEPTION RAISED -------");
+        }
+
         // Print activity stack
         try {
             ret.activityStack = driver.getActivityStack(target);
             log("Activity Stacks:");
             for(String s: ret.activityStack) { log(s); }
+        }
+        catch (InterruptedException e) {
+            log("*****************************");
+            log("Cannot get application info:");
+            log(e.toString());
+            log("*****************************");
+        }
+
+        try {
+            ret.focusedActivity = driver.getFocusedActivity();
+            log("Focused Activity:" + ret.focusedActivity);
         }
         catch (InterruptedException e) {
             log("*****************************");

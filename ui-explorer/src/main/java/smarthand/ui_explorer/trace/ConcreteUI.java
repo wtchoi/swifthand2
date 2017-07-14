@@ -374,6 +374,22 @@ public class ConcreteUI extends HashConsed {
         logger.log(builder.toString());
     }
 
+    public boolean isCrashScreen() {
+
+        boolean isCrashMessage = false;
+        if (this.type != null && this.type.equals("TextView") && this.text.startsWith("Unfortunately,") && this.text.endsWith("has stopped.")) {
+            isCrashMessage = true;
+        }
+        if (isCrashMessage) return true;
+
+        if (this.children != null) {
+            for (ConcreteUI child:children) {
+                if (child.isCrashScreen()) return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean checkUiDetailImpl(ConcreteUI a, ConcreteUI b, LinkedList<Integer> path, CheckOption option, Logger logger) {
         //Let's first try structural equality
         if (!Util.equalsNullable(a,b)) {

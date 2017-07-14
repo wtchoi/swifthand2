@@ -1,5 +1,6 @@
 package smarthand.ui_explorer.strategy.regression;
 
+import smarthand.ui_explorer.Logger;
 import smarthand.ui_explorer.trace.Coverage;
 
 import java.util.*;
@@ -7,7 +8,7 @@ import java.util.*;
 /**
  * Created by wtchoi on 4/8/17.
  */
-class PlanSet<Info extends PlanInfo> {
+class PlanSet<Info extends PlanInfo> implements Logger {
     public interface Observer<Info> {
         int FP = 0;
         int CV = 1;
@@ -18,8 +19,8 @@ class PlanSet<Info extends PlanInfo> {
     LinkedList<LinkedList<Integer>> plans = new LinkedList<>();
     private HashMap<LinkedList<Integer>, Info> planInfo = new HashMap();
     private HashSet<LinkedList<Integer>> planSet = new HashSet<>();
-
     private LinkedList<Observer> observers = new LinkedList<>();
+    private HashMap<LinkedList<Integer>, String> removedPlans = new HashMap<>();
 
     public PlanSet() {
 
@@ -53,7 +54,7 @@ class PlanSet<Info extends PlanInfo> {
                     survived.add(p);
                 } else {
                     observers.forEach(x -> x.onFilterOutItem(p, planInfo.get(p), Observer.CV, null));
-                    removePlanInfo(p);
+                    removePlanInfo(p, "filterPlansByCoverage");
                 }
             }
         }
@@ -86,17 +87,31 @@ class PlanSet<Info extends PlanInfo> {
         return plans.isEmpty() ? null : plans.removeFirst();
     }
 
-    public void removePlanInfo(LinkedList<Integer> plan) {
+    public void removePlanInfo(LinkedList<Integer> plan, String reason) {
         planInfo.remove(plan);
         planSet.remove(plan);
+
+        removedPlans.put(plan, reason);
     }
 
     public Info getPlanInfo(LinkedList<Integer> plan) {
+        if (!planSet.contains(plan)) {
+            if (removedPlans.containsKey(plan) ) {
+                this.log("planInfo was removed by " + removedPlans.get(plan));
+                System.out.println("planInfo was removed by " + removedPlans.get(plan));
+            }
+            else {
+                this.log("planInfo was never removed, and not in the table. maybe not initialized properly?");
+                System.out.println("planInfo was never removed, and not in the table. maybe not initialized properly?");
+            }
+            return null;
+        }
         return planInfo.get(plan);
     }
 
     public void registerPlan(LinkedList<Integer> plan, Info info) {
         plans.add(plan);
+        planSet.add(plan);
         planInfo.put(plan, info);
     }
 
@@ -133,10 +148,29 @@ class PlanSet<Info extends PlanInfo> {
 
         for (LinkedList<Integer> plan: plans) {
             if (!sampledPlans.contains(plan)) {
-                removePlanInfo(plan);
+                removePlanInfo(plan, "sample");
             }
         }
 
         plans = sampledPlans;
+    }
+
+    private Logger logger;
+    public void setLogger(Logger logger) {
+        this.logger = logger;
+    }
+
+    @Override
+    public void log(String s) {
+        if (logger != null) {
+            logger.log(s);
+        }
+    }
+
+    @Override
+    public void log(String s, int indent) {
+        if (logger != null) {
+            logger.log(s, indent);
+        }
     }
 }

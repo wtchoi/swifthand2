@@ -18,8 +18,12 @@ public class MonkeyStrategy extends Strategy {
 
     @Override
     public void reportExecution(DeviceInfo deviceInfo, Coverage coverage, boolean escaped, boolean blocked) {
-        String currentActivity = "null";
-        if (deviceInfo.activityStack.size() > 0) currentActivity = deviceInfo.activityStack.getLast();
+        //String currentActivity = (deviceInfo.activityStack.size() == 0)
+        //        ? "null"
+        //        : deviceInfo.activityStack.getLast();
+        String currentActivity = deviceInfo.focusedActivity;
+        if (currentActivity == null) currentActivity = "null";
+
         AbstractUI uistate = AbstractUI.getState(currentActivity, deviceInfo.isKeyboardShown, deviceInfo.filteredEvents);
 
         previousUI = currentUI;

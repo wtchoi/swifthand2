@@ -3,10 +3,13 @@ package smarthand.ui_explorer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import smarthand.ui_explorer.strategy.*;
+import smarthand.ui_explorer.trace.AbstractUI;
+import smarthand.ui_explorer.trace.ConcreteUI;
 import smarthand.ui_explorer.trace.Coverage;
 import smarthand.ui_explorer.util.Util;
 
 import java.io.*;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 public class Client implements Logger {
@@ -16,14 +19,18 @@ public class Client implements Logger {
 
   Strategy strategy;
   int blockingCount = 0;
+  int keyboardCount = 0;
 
   CoverageManager coverageManager;
+  HashSet<Integer> exceptionTracker = new HashSet<>(); //tracking distinct exceptions (no duplication)
+  int exceptionCount = 0; //tracking the number of raised exceptions (including duplication)
   UiDriverBridge uiBridge;
 
   ApkInfo targetApkInfo;
   DeviceDriver deviceDriver;
 
-  ResetMethod resetMethod = ResetMethod.FORCE_STOP;
+  private final ResetMethod resetMethod = ResetMethod.FORCE_STOP;
+  private final boolean waitBeforeClose = true;
 
   Coverage coverageSinceLastReport = new Coverage();
 
@@ -92,16 +99,21 @@ public class Client implements Logger {
     }
 
     int port = Integer.parseInt(Options.get(Options.Keys.PORT));
-    uiBridge.start(15000, port);
+    uiBridge.start(10000, port);
+    LogcatManager.start(Options.get(Options.Keys.DEVICE_NAME));
+    LogcatManager.getLogs(); //remove initial garbage log
     int waitCounter = 0;
 
+    boolean explicitClosePrepareRequested = false;
     boolean explicitCloseRequested = false;
     boolean escaped = false;
     int counterAfterLastReset = 0;
 
-    HistoryManager.instance().begin();
-    HistoryManager.instance().startNextPeriod();
-    HistoryManager.instance().setDecision("initiate testing");
+    HistoryManager hm = HistoryManager.instance();
+
+    hm.begin();
+    hm.startNextPeriod();
+    hm.setDecision("initiate testing");
 
     long timeout = Long.parseLong(Options.get(Options.Keys.TIMEOUT)) * 1000;
 
@@ -112,17 +124,20 @@ public class Client implements Logger {
       log("iter = " + i);
 
       int commandLimit = Integer.parseInt(Options.get(Options.Keys.COMMAND_LIMIT));
-      if (commandLimit != 0 && HistoryManager.instance().getCurrentPeriod() >= commandLimit) {
+      if (commandLimit != 0 && hm.getCurrentPeriod() >= commandLimit) {
         log("Terminate: experiment finished (command limit reached)");
         break;
       }
       System.out.println("Timeout:" + timeout);
-      System.out.println("Elapsed:" + HistoryManager.instance().getElapsedTime());
+      System.out.println("Elapsed:" + hm.getElapsedTime());
 
-      if (HistoryManager.instance().getElapsedTime() >= timeout) {
+      if (hm.getElapsedTime() >= timeout) {
         log("Terminate: experiment finished (timeout)");
         break;
       }
+
+      log("Wait a while before starting next iteration");
+      Util.sleep(200);
 
       // send heartbeat
       uiBridge.sendHeartBeat(i);
@@ -134,17 +149,23 @@ public class Client implements Logger {
       getTimingFromDevice();
 
       // get coverage info
-      coverageManager.addCoverage(data.coveredMethods, data.coveredBranches);
-      coverageSinceLastReport.add(data.coveredMethods, data.coveredBranches);
-      if (coverageManager.existsLatestBranchDelta()) {
-        String bDelta = Util.makeIntSetToString(coverageManager.getLatestBranchDelta(), ",", null).toString();
-        HistoryManager.instance().periodStat("Client:BranchCoverageDelta", bDelta);
-      }
-      if (coverageManager.existsLatestMethodDelta()) {
-        String mDelta = Util.makeIntSetToString(coverageManager.getLatestMethodDelta(), ",", null).toString();
-        HistoryManager.instance().periodStat("Client:MethodCoverageDelta", mDelta);
+      if (!explicitCloseRequested || explicitClosePrepareRequested) {
+        coverageManager.addCoverage(data.coveredMethods, data.coveredBranches);
+        coverageSinceLastReport.add(data.coveredMethods, data.coveredBranches);
+        if (coverageManager.existsLatestBranchDelta()) {
+          String bDelta = Util.makeIntSetToString(coverageManager.getLatestBranchDelta(), ",", null).toString();
+          hm.periodStat("Client:BranchCoverageDelta", bDelta);
+        }
+        if (coverageManager.existsLatestMethodDelta()) {
+          String mDelta = Util.makeIntSetToString(coverageManager.getLatestMethodDelta(), ",", null).toString();
+          hm.periodStat("Client:MethodCoverageDelta", mDelta);
+        }
       }
 
+      if (data.logcatHash != 0) {
+        exceptionTracker.add(data.logcatHash);
+        exceptionCount++;
+      }
       // You received an empty event set. Something is wrong with event collection.
       // By default, the event set should contain at least two default events.
       if (data.events.isEmpty()) {
@@ -168,9 +189,20 @@ public class Client implements Logger {
       if (escaped && data.appPackageName.equals("null")) {
         escaped = false;
       }
-
-
       boolean blocked = false;
+
+      if (explicitClosePrepareRequested) {
+        log("Close:Closing the app");
+        log("Current Package:" + data.appPackageName);
+        log("Close Target Package :" + launchMode + ":" + targetApkInfo.appPackage);
+        uiBridge.sendEvent("closeapp:pm:" + targetApkInfo.appPackage);
+        Util.sleep(500);
+        resetApp(targetApkInfo);
+        Util.sleep(500);
+        getTimingFromDevice();
+        explicitClosePrepareRequested = false;
+        continue;
+      }
 
       // a different app is showing
       if(escaped) {
@@ -191,10 +223,8 @@ public class Client implements Logger {
         }
       }
       else {
-        //blocked = (data.events.size() == 3 && data.appGuiTree.length() != 0);
         blocked = (data.events.size() == 3);
-
-        if (blocked && waitCounter < 20) {
+        if (blocked && waitCounter < 8) {
           // handling a possibly blocking state
           waitCounter++;
           log("Blocking State: wait a while : " + (waitCounter + 1));
@@ -213,24 +243,26 @@ public class Client implements Logger {
       }
 
       waitCounter = 0;
-      HistoryManager.instance().actionPerformed();
+      hm.actionPerformed();
 
       strategy.reportExecution(data, coverageSinceLastReport, escaped, blocked);
       coverageSinceLastReport = new Coverage();
 
-      strategy.intermediateDump(HistoryManager.instance().getCurrentPeriod());
-      HistoryManager.instance().periodStat("Client:#Block", blockingCount);
-      HistoryManager.instance().periodStat("Client:MethodCoverage", coverageManager.getMethodCoverage());
-      HistoryManager.instance().periodStat("Client:BranchCoverage", coverageManager.getBranchCoverage());
-      HistoryManager.instance().periodStat("Client:MBCoverage", coverageManager.getMBCoverage());
-      HistoryManager.instance().informationGathered();
-      HistoryManager.instance().finishCurrentPeriod();
-      HistoryManager.instance().startNextPeriod();
+      strategy.intermediateDump(hm.getCurrentPeriod());
+      hm.periodStat("Client:#Block", blockingCount);
+      hm.periodStat("Client:MethodCoverage", coverageManager.getMethodCoverage());
+      hm.periodStat("Client:BranchCoverage", coverageManager.getBranchCoverage() - exceptionTracker.size());
+      hm.periodStat("Client:MBCoverage", coverageManager.getMBCoverage());
+      hm.periodStat("Client:ExceptionCoverage", exceptionTracker.size());
+      hm.periodStat("Client:ExceptionCount", exceptionCount);
+      hm.periodStat("Client:KeyboardHandled", keyboardCount);
+      hm.informationGathered();
+      hm.finishCurrentPeriod();
+      hm.startNextPeriod();
 
       String action = strategy.getNextAction();
       log("action returned: " + action);
-
-      HistoryManager.instance().setDecision(action);
+      hm.setDecision(action);
 
       if (action == null) {
         log("Terminate: received null command from the strategy.");
@@ -249,7 +281,7 @@ public class Client implements Logger {
         Util.sleep(500);
         resetApp(targetApkInfo);
         uiBridge.sendEvent("launch:" + launchMode + ":" + targetApkInfo.appPackage);
-        Util.sleep(15000);
+        Util.sleep(2000);
         getTimingFromDevice();
         counterAfterLastReset = 0;
       }
@@ -261,20 +293,31 @@ public class Client implements Logger {
         counterAfterLastReset = 0;
       }
       else if (action.equals("close")) {
-        log("Close:Closing the app");
-        log("Current Package:" + data.appPackageName);
-        log("Close Target Package :" + launchMode + ":" + targetApkInfo.appPackage);
-        uiBridge.sendEvent("closeapp:pm:" + targetApkInfo.appPackage);
-        Util.sleep(500);
-        resetApp(targetApkInfo);
-        Util.sleep(500);
-        getTimingFromDevice();
-        explicitCloseRequested = true;
+        if (!waitBeforeClose) {
+          log("Close:Closing the app");
+          log("Current Package:" + data.appPackageName);
+          log("Close Target Package :" + launchMode + ":" + targetApkInfo.appPackage);
+          uiBridge.sendEvent("closeapp:pm:" + targetApkInfo.appPackage);
+          Util.sleep(500);
+          resetApp(targetApkInfo);
+          Util.sleep(500);
+          getTimingFromDevice();
+          explicitCloseRequested = true;
+        }
+        else {
+          log("Close:Closing the app");
+          log("Wait a while before closing");
+          Util.sleep(4000);
+          uiBridge.sendEvent("wait");
+          getTimingFromDevice();
+          explicitCloseRequested = true;
+          explicitClosePrepareRequested = true;
+        }
       }
       else if (action.startsWith("monkey")) {
         log("Monkey");
         int monkeyTimeout = Integer.parseInt(action.split(":")[1]);
-        int period = HistoryManager.instance().getCurrentPeriod();
+        int period = hm.getCurrentPeriod();
         String monkeyFileName = Options.get(Options.Keys.OUTPUT_DIR) + "/image/monkey" + period;
         MonkeyManager.runRandomMonkey(monkeyTimeout, targetApkInfo.appPackage, monkeyFileName);
         uiBridge.sendEvent("nop");
@@ -282,7 +325,7 @@ public class Client implements Logger {
       }
       else if (action.startsWith("cmonkey")) {
         log("Commanding Monkey");
-        int period = HistoryManager.instance().getCurrentPeriod();
+        int period = hm.getCurrentPeriod();
         String monkeyFileName = Options.get(Options.Keys.OUTPUT_DIR) + "/image/monkeyC" + period;
 
         uiBridge.stop();
@@ -290,7 +333,7 @@ public class Client implements Logger {
         MonkeyManager.start("adb", Options.get(Options.Keys.DEVICE_NAME), targetApkInfo.appPackage, monkeyFileName, port + 1);
         MonkeyManager.sendBatchCommandsToMonkeyAndWaitToStop(action.substring(8)); // Skip 'cmonkey:'
 
-        uiBridge.start(2000, port);
+        uiBridge.start(10000, port);
         deviceDriver.wakeUpDevice();
       }
       else if (action.startsWith("event")){
@@ -303,10 +346,10 @@ public class Client implements Logger {
       }
     }
     uiBridge.sendEvent("end");
-    HistoryManager.instance().actionPerformed();
-    HistoryManager.instance().informationGathered();
-    HistoryManager.instance().finishCurrentPeriod();
-    HistoryManager.instance().end();
+    hm.actionPerformed();
+    hm.informationGathered();
+    hm.finishCurrentPeriod();
+    hm.end();
 
     try {
       deviceDriver.clearSdCard();
@@ -317,6 +360,7 @@ public class Client implements Logger {
 
     coverageManager.dump();
     strategy.finalDump();
+    LogcatManager.dumpExceptionInfo(Options.get(Options.Keys.OUTPUT_DIR) + "/exceptions");
   }
 
   // update meta.txt with "note" field

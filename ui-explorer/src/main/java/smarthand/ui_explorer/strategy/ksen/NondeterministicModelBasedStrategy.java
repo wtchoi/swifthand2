@@ -73,8 +73,12 @@ public class NondeterministicModelBasedStrategy extends Strategy {
       log(s);
     }
 
-    String currentActivity = "null";
-    if (deviceInfo.activityStack.size() > 0) currentActivity = deviceInfo.activityStack.getLast();
+    //String currentActivity = (deviceInfo.activityStack.size() == 0)
+    //        ? "null"
+    //        : deviceInfo.activityStack.getLast();
+    String currentActivity = deviceInfo.focusedActivity;
+    if (currentActivity == null) currentActivity = "null";
+
     int id = getUniqueAppStateID(currentActivity, deviceInfo.isKeyboardShown, deviceInfo.appGuiTree, elist);
     int nTransitions = elist.size();
 

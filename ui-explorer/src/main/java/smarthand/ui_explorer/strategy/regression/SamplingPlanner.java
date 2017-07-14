@@ -398,18 +398,16 @@ public class SamplingPlanner extends TraceBasedPlanner {
     @Override
     public void intermediateDump(int id) {
         HistoryManager hm = HistoryManager.instance();
-
-        hm.periodStat("Replay:#Screen", currentCoverage.screenCoverage.size());
-        hm.periodStat("Replay:#Branch", currentCoverage.branchCoverage.size());
-        hm.periodStat("Replay:#Method", currentCoverage.methodCoverage.size());
-
         Coverage trialGain = Coverage.minus(currentCoverage, confirmedCoverage);
-        hm.periodStat("Replay:Plan:Mini:Trial:#Method", trialGain.methodCoverage.size());
-        hm.periodStat("Replay:Plan:Mini:Trial:#Branch", trialGain.branchCoverage.size());
 
-        hm.periodStat("Replay:Confirmed:#Screen", confirmedCoverage.screenCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Branch", confirmedCoverage.branchCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Method", confirmedCoverage.methodCoverage.size());
+        dumpCoverage("Replay:Plan:Mini:Trial", trialGain);
+        dumpCoverage("Replay", currentCoverage);
+        dumpCoverage("Replay:Expected", expectedFinalCoverage);;
+        dumpCoverage("Replay:Confirmed", confirmedCoverage);
+        dumpCoverage("Trace", inputTraceCoverage);
+
+        hm.periodStat("Trace:#Event", inputTraceProfiler.events);
+        hm.periodStat("Trace:#Seq.", inputTraceProfiler.traces);
 
         hm.periodStat("Replay:Plan:Mini:#Trials.", trialCount);
         hm.periodStat("Replay:Plan:Mini:#Skipped Candidates FP", skippedCandidateCountFP);
@@ -418,19 +416,7 @@ public class SamplingPlanner extends TraceBasedPlanner {
         hm.periodStat("Replay:Plan:Mini:#Skipped Events CV", skippedCandidateEventCountCV);
         hm.periodStat("Replay:Plan:#Selected Seq.", selectedSequenceCount);
         hm.periodStat("Replay:Plan:#Selected Event", selectedEventCount);
-
         hm.periodStat("Replay:Plan:#Dropped Seq.", droppedSequenceCount);
-
-        hm.periodStat("Replay:Expected:#Screen", expectedFinalCoverage.screenCoverage.size());
-        hm.periodStat("Replay:Expected:#Branch", expectedFinalCoverage.branchCoverage.size());
-        hm.periodStat("Replay:Expected:#Method", expectedFinalCoverage.methodCoverage.size());
-
-        hm.periodStat("Trace:#Screen", inputTraceCoverage.screenCoverage.size());
-        hm.periodStat("Trace:#Branch", inputTraceCoverage.branchCoverage.size());
-        hm.periodStat("Trace:#Method", inputTraceCoverage.methodCoverage.size());
-        hm.periodStat("Trace:#Event", inputTraceProfiler.events);
-        hm.periodStat("Trace:#Seq.", inputTraceProfiler.traces);
-
     }
 
 

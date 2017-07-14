@@ -7,6 +7,7 @@ package smarthand.ui_explorer.strategy;
 //Constant pool class
 public final class C {
     //actions
+    public static final int RESET = 6666666;
     public static final int CLOSE = 7777777;
     public static final int START = 8888888;
     public static final int WILDCARD = 9999999;

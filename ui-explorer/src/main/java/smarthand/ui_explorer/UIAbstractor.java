@@ -12,6 +12,7 @@ import java.util.LinkedList;
 public class UIAbstractor {
 
     static int listLimit = 0;
+    static boolean ignoreKeyboard = true;
 
     public static void setListLimit(int limit) {
         if (limit < 0) throw new RuntimeException("list limit should be a positive number");
@@ -86,7 +87,12 @@ public class UIAbstractor {
     // Get  event list and activity name, and compute simplified event list, key, and tooltip of the abstract state;
     public static void computeAbstraction(String activityName, Boolean isKeyboardShown, LinkedList<String> elist, StringBuilder key, StringBuilder tooltip) {
         // compute abstraction
-        key.append(activityName + "," + isKeyboardShown + ",");
+        if (ignoreKeyboard){
+            key.append(activityName + ",");
+        }
+        else {
+            key.append(activityName + "," + isKeyboardShown + ",");
+        }
         boolean first = true;
         for (String next : elist) {
             String[] strs = next.split(":");

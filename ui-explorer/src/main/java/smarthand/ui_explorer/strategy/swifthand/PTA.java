@@ -160,7 +160,7 @@ public class PTA {
 
 
     // Hash-consed. Can be compared with equality check.
-    class PTAState implements Comparable<PTAState> {
+    public class PTAState implements Comparable<PTAState> {
         PTAState(AbstractUI uistate) {
             int eventCount = uistate.getEventCount();
 
@@ -171,7 +171,7 @@ public class PTA {
             this.coveredMethods = new HashSet<>();
         }
 
-        PTAState populateChild(AbstractUI uistate, Integer eventIndex) {
+        public PTAState populateChild(AbstractUI uistate, Integer eventIndex) {
             if (transition[eventIndex] == null)
                 transition[eventIndex] = new HashSet<>();
 
@@ -187,7 +187,7 @@ public class PTA {
             return child;
         }
 
-        PTAState populateFailedChild(Integer eventIndex) {
+        public PTAState populateFailedChild(Integer eventIndex) {
             return populateChild(AbstractUI.getFailState(), eventIndex);
         }
 
@@ -210,17 +210,14 @@ public class PTA {
             coveredBranches.addAll(cb);
         }
 
-        int sid;
-        AbstractUI uistate;
-
-        PTAState parent;
-        Integer incomingEventIndex;
-        Set<Integer> coveredMethods;
-        Set<Integer> coveredBranches;
-
-        Set<PTAState>[] transition;
-
-        boolean isRealized = true;
+        public int sid;
+        public AbstractUI uistate;
+        public PTAState parent;
+        public Integer incomingEventIndex;
+        public Set<Integer> coveredMethods;
+        public Set<Integer> coveredBranches;
+        public Set<PTAState>[] transition;
+        public boolean isRealized = true;
     }
 
     static class PTAVisitor {
@@ -258,5 +255,9 @@ public class PTA {
         result.put("ui", AbstractUI.dumpAbstractionsToJson());
         result.put("pta", PTA.dumpToJson(this));
         return result;
+    }
+
+    public int countNode() {
+        return nextStateId;
     }
 }

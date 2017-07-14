@@ -234,12 +234,16 @@ public class Trace {
 
     private static Collection<Integer> constructIntList(JSONArray arr) {
         LinkedList<Integer> lst = new LinkedList<>();
-        for (int i=0; i<arr.length(); i++) { lst.add(arr.getInt(i)); }
+        for (int i=0; i<arr.length(); i++) {
+            //lst.add(Integer.parseInt(arr.getString(i)));
+            lst.add(arr.getInt(i));
+        }
         return lst;
     }
 
     private static JSONArray constructJsonIntList(Collection<Integer> lst) {
         JSONArray arr = new JSONArray();
+        //lst.forEach(x -> arr.put(Integer.toString(x)));
         lst.forEach(x -> arr.put(x));
         return arr;
     }

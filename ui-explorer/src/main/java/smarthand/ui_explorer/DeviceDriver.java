@@ -88,6 +88,28 @@ public class DeviceDriver {
         return list;
     }
 
+    // get the currently focused activity (may or may not belong to the target app)
+    public String getFocusedActivity() throws InterruptedException, IOException {
+        String androidHome = System.getenv("ANDROID_HOME");
+        String cmd = androidHome + "/platform-tools/adb -s " + deviceID+ " shell dumpsys activity";
+        Runtime rt = Runtime.getRuntime();
+        Process pr = rt.exec(cmd);
+
+        BufferedReader dumpsysIn = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+        String result = null;
+        String line;
+
+        while((line=dumpsysIn.readLine()) != null) {
+            if (line.contains("mFocusedActivity")) {
+                String[] activity = line.split("\\s+");
+                result = activity[4];
+                break;
+            }
+        }
+        pr.waitFor();
+        return result;
+    }
+
     // clear sd card contents
     public void clearSdCard() throws IOException, InterruptedException {
         String androidHome = System.getenv("ANDROID_HOME");

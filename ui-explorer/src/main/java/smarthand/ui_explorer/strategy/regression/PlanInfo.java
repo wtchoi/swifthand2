@@ -10,6 +10,7 @@ class PlanInfo {
     Coverage c;
     int trial = 0;
     int fragmentCount;
+    boolean justSynthesized = true;
 
     //used by sorting function
     Coverage gain;

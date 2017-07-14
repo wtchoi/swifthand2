@@ -1,12 +1,13 @@
 package smarthand.ui_explorer.strategy.swifthand;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import smarthand.ui_explorer.Logger;
+import smarthand.ui_explorer.trace.AbstractUI;
+import smarthand.ui_explorer.util.Util;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.TreeSet;
 
 /**
  * Created by wtchoi on 6/21/16.
@@ -17,10 +18,13 @@ public class ModelConstructor {
     Logger logger;
     Model model;
     boolean ignoreOldTrace = false;
+    boolean conservativeMerge = false;
+    HashMap<Integer, TreeSet<LinkedList<Integer>>> counterExamples = new HashMap<>();
 
-    public ModelConstructor(Logger logger, boolean ignoreOldTrace) {
+    public ModelConstructor(Logger logger, boolean ignoreOldTrace, boolean conservativeMerge) {
         this.logger = logger;
         this.ignoreOldTrace = ignoreOldTrace;
+        this.conservativeMerge = conservativeMerge;
     }
 
     private void log(String msg) {
@@ -112,7 +116,9 @@ public class ModelConstructor {
         }
     }
 
-    private static class Disagree extends Exception {}
+    private static class Disagree extends Exception {
+        LinkedList<Integer> counterExample = new LinkedList<>();
+    }
 
     private static class OverlayGraph {
         HashMap<Model.ModelState, HashMap<Integer,HashSet<Model.ModelState>>> overlayGraph = new HashMap<>();
@@ -168,18 +174,36 @@ public class ModelConstructor {
         }
     }
 
+    // Assume red.abstractUI == blue.abstractUI
     private Integer computeScoreBF(Model.ModelState red, Model.ModelState blue, boolean verbose, HashMap<Integer, HashSet<Integer>> blacklist) {
         try {
+            if (conservativeMerge && (!blue.isClosed() || !red.isClosed()))  return 0;
             if (blacklisted(red, blue, blacklist)) return 0;
-            return computeScoreBody(red, blue, new OverlayGraph(), HashMultimap.create(), verbose);
+            return computeScoreBody(red, blue, new OverlayGraph(), verbose);
         }
         catch (Disagree e) {
             addToBlacklist(red, blue, blacklist);
+            addCounterExample(red.abstractUi, e.counterExample);
             return 0;
         }
     }
 
-    private Integer computeScoreBody(Model.ModelState red, Model.ModelState blue, OverlayGraph og, Multimap<Integer, Integer> equalityAssumptions, boolean verbose) throws Disagree{
+    private void addCounterExample(AbstractUI abstractUI, LinkedList<Integer> counterExample) {
+        if (counterExample.size() == 1) return;
+        TreeSet<LinkedList<Integer>> examples;
+        if (!counterExamples.containsKey(abstractUI.id())) {
+            examples = new TreeSet<>(Util::compareIntegerList);
+            counterExamples.put(abstractUI.id(), examples);
+        }
+        else {
+            examples = counterExamples.get(abstractUI.id());
+        }
+
+        examples.add(counterExample);
+    }
+
+
+    private Integer computeScoreBody(Model.ModelState red, Model.ModelState blue, OverlayGraph og, boolean verbose) throws Disagree{
         if (red.abstractUi != blue.abstractUi){
             if (verbose){
                 log("Comparison Failed: " + red.abstractUi.id() + " vs " + blue.abstractUi.id());
@@ -189,7 +213,7 @@ public class ModelConstructor {
             throw new Disagree();
         }
 
-        // special treatment for the fail state, since they are always been merged
+        // special treatment for the fail state, since they are already merged
         if (blue.isFailState() && red.isFailState()) return 0;
 
         Integer score = 0;
@@ -205,10 +229,11 @@ public class ModelConstructor {
                 Model.ModelState redChild = redChildren.iterator().next();
                 Model.ModelState blueChild = blueChildren.iterator().next();
                 try {
-                    score += computeScoreBody(redChild, blueChild, og, equalityAssumptions, verbose);
+                    score += computeScoreBody(redChild, blueChild, og, verbose);
                 }
                 catch (Disagree e) {
                     if (verbose) log(i + "th child (1)");
+                    e.counterExample.addFirst(i);
                     throw e;
                 }
             }
@@ -218,10 +243,11 @@ public class ModelConstructor {
                     for (Model.ModelState redChild:redChildren) {
                         if (redChild.abstractUi == blueChild.abstractUi) {
                             try {
-                                score += computeScoreBody(redChild, blueChild, og, equalityAssumptions, verbose);
+                                score += computeScoreBody(redChild, blueChild, og, verbose);
                             }
                             catch(Disagree e) {
                                 if (verbose) log(i + "th child (2)");
+                                e.counterExample.addFirst(i);
                                 throw e;
                             }
                             newChild = false;

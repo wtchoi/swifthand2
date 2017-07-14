@@ -25,7 +25,7 @@ class STMLModelTraversalHelper implements ForwardLabeledGraphPrintTrait<Model.Mo
     @Override
     public Iterable<Model.ModelState> getSuccessors(Model.ModelState node) {
         LinkedList<Model.ModelState> succs = new LinkedList<>();
-        for (int i = 0; i<node.abstractUi.getEventCount(); i++) {
+        for (int i = 1; i<node.abstractUi.getEventCount(); i++) { //skip close event
             HashSet<Model.ModelState> children = strategy.getChildren(node, i, strategy.eDgreeMax);
             if (children == null) continue;
             for (Model.ModelState succ: children) {
@@ -38,7 +38,7 @@ class STMLModelTraversalHelper implements ForwardLabeledGraphPrintTrait<Model.Mo
     @Override
     public Iterable<Transition<Model.ModelState>> getTransitions(Model.ModelState node) {
         LinkedList<Transition<Model.ModelState>> transitions = new LinkedList<>();
-        for (int i = 0; i<node.abstractUi.getEventCount(); i++) {
+        for (int i = 1; i<node.abstractUi.getEventCount(); i++) { //skip close event
             HashSet<Model.ModelState> children = strategy.getChildren(node, i, strategy.eDgreeMax);
             if (children == null) continue;
             for (Model.ModelState succ: children) {
@@ -51,7 +51,7 @@ class STMLModelTraversalHelper implements ForwardLabeledGraphPrintTrait<Model.Mo
     @Override
     public int countTransition(Model.ModelState node) {
         int count = 0;
-        for (int i = 0; i < node.outTransitions.length; i++) {
+        for (int i = 1; i < node.outTransitions.length; i++) { //skip close event
             if (node.outTransitions[i] == null) continue;
             count += node.outTransitions[i].size();
         }

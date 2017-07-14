@@ -160,9 +160,11 @@ public class MBRTStrategy extends Strategy {
         //    eventCounter++;
         //}
 
-        String currentActivity = (deviceInfo.activityStack.size() == 0)
-            ? "null"
-            : deviceInfo.activityStack.getLast();
+        //String currentActivity = (deviceInfo.activityStack.size() == 0)
+        //        ? "null"
+        //        : deviceInfo.activityStack.getLast();
+        String currentActivity = deviceInfo.focusedActivity;
+        if (currentActivity == null) currentActivity = "null";
 
         Boolean isKeyboardShown = deviceInfo.isKeyboardShown;
 
@@ -453,7 +455,7 @@ public class MBRTStrategy extends Strategy {
         reconstructionCount++;
 
         log("RECONSTRUCTION BEGIN!");
-        ModelConstructor learner = new ModelConstructor(this, ignoreOldTrace);
+        ModelConstructor learner = new ModelConstructor(this, ignoreOldTrace, false);
         learner.reconstruct(model);
 
         // recompute prev and current

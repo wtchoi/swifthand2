@@ -83,10 +83,11 @@ public class VRFStrategy extends Strategy {
     }
 
     public void reportExecution(DeviceInfo deviceInfo, Coverage coverage, boolean escaped, boolean blocked) {
-        String currentActivity = (deviceInfo.activityStack.size() == 0)
-                ? "null"
-                : deviceInfo.activityStack.getLast();
-
+        //String currentActivity = (deviceInfo.activityStack.size() == 0)
+        //        ? "null"
+        //        : deviceInfo.activityStack.getLast();
+        String currentActivity = deviceInfo.focusedActivity;
+        if (currentActivity == null) currentActivity = "null";
         Boolean isKeyboardShown = deviceInfo.isKeyboardShown;
 
         prevAbstractUi = currAbstractUi;

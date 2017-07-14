@@ -65,6 +65,20 @@ public class Model {
         return state;
     }
 
+    public ModelState createState(PTA.PTAState ptaState) {
+        Integer uid = ptaState.uistate.id();
+        Model.ModelState state = ptaState.isFailState() ? getFailState() : new Model.ModelState(ptaState);
+
+        if (!uiToStates.containsKey(uid)) {
+            uiToStates.put(uid, new HashSet<>());
+        }
+        HashSet<Model.ModelState> stateSet = uiToStates.get(uid);
+        stateSet.add(state);
+
+        assert state != null;
+        return state;
+    }
+
     // only to be invoked after removing PTA state.
     public void purge() {
         HashSet<Integer> keySet = new HashSet<>(uiToStates.keySet());

@@ -30,6 +30,7 @@ public class SwiftHand extends UiAutomatorTestCase {
 
   public static final int TIMEOUT = 10000;
   public static final int WAIT = 200;
+  public static final int TINYWAIT = 100;
 
   private StopWatch watch = new StopWatch();
   private boolean close_requested = false;
@@ -37,6 +38,7 @@ public class SwiftHand extends UiAutomatorTestCase {
   private void miniwait() {
     SystemClock.sleep(WAIT);
   }
+  private void tinywait() { SystemClock.sleep(TINYWAIT); }
 
   private void waitForIdle() {
     try {
@@ -535,6 +537,9 @@ public class SwiftHand extends UiAutomatorTestCase {
         dcheckAction(components[4], components[5], components[1]);
       } else if (components[0].equals("nop")) {
         int x = 1; // nop
+      } else if (components[0].equals("escape")) {
+        UiDevice.getInstance().pressKeyCode(111);
+        waitForIdle();
       }
     } catch (Exception e) {
       System.out.flush();
@@ -656,14 +661,31 @@ public class SwiftHand extends UiAutomatorTestCase {
             out.println("end");                                 // <-- SEND
 
             // send log messages
+            tinywait();
             LinkedList<String> messages = logServer.getMessages();
             if (!messages.isEmpty()) {
-              miniwait();
+              tinywait();
               LinkedList<String> furtherMessages = logServer.getMessages();
               if (!furtherMessages.isEmpty()) {
                 messages.addAll(furtherMessages);
               }
             }
+
+            /*
+            miniwait();
+            LinkedList<String> messages = logServer.getMessages();
+            if (!messages.isEmpty()) {
+              int waitCounter = 0;
+              do {
+                miniwait();
+                LinkedList<String> furtherMessages = logServer.getMessages();
+                if (furtherMessages.isEmpty()) break;
+                messages.addAll(furtherMessages);
+                waitCounter = waitCounter + 1;
+              }
+              while (waitCounter <= 3);
+            }
+            */
 
             if (close_requested) {
               logServer.kill();

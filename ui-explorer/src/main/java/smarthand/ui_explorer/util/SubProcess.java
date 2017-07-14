@@ -15,19 +15,51 @@ public class SubProcess {
 
     private Process mProcess = null;
     private Thread mThread = null;
-    private PrintWriter mOutputWriter = null;
+    private OutputAdopter mOutputWriter = null;
+
+    public interface OutputAdopter {
+        void flush();
+        void println(String s);
+        void close();
+    }
 
     public static SubProcess execCommand(final String sCommand, final String sOutputFilename, final boolean appendLog) {
         System.out.println("\tExecuting " + sCommand + ", writing to " + sOutputFilename);
-        final SubProcess subProcess = new SubProcess();
-
+        OutputAdopter writer = null;
         if (sOutputFilename != null) {
             try {
-                subProcess.mOutputWriter = new PrintWriter(new BufferedWriter(new FileWriter(sOutputFilename, appendLog)));
+                writer = new OutputAdopter() {
+                    private PrintWriter w = new PrintWriter(new BufferedWriter(new FileWriter(sOutputFilename, appendLog)));
+
+                    @Override
+                    public void flush() {
+                        w.flush();
+                    }
+
+                    @Override
+                    public void println(String s) {
+                        w.println(s);
+                    }
+
+                    @Override
+                    public void close() {
+                        w.close();
+                    }
+                };
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+
+        return execCommand(sCommand, writer);
+    }
+
+
+    public static SubProcess execCommand(final String sCommand, final OutputAdopter writer) {
+        System.out.println("\tExecuting " + sCommand);
+        final SubProcess subProcess = new SubProcess();
+
+        subProcess.mOutputWriter = writer;
 
         try {
             subProcess.mProcess = Runtime.getRuntime().exec(sCommand);
@@ -111,8 +143,10 @@ public class SubProcess {
             @Override
             public void run() {
                 // System.out.println("\t\tHook called.");
-                for (SubProcess subProcess : SubProcessPool)
-                    subProcess.kill();
+                synchronized (SubProcessPool) {
+                    for (SubProcess subProcess : SubProcessPool)
+                        subProcess.kill();
+                }
             }
         });
     }

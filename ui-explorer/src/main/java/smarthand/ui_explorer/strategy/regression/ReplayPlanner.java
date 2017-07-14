@@ -42,6 +42,7 @@ public class ReplayPlanner extends TraceBasedPlanner {
     static class PlanInfo {
         Coverage c;
         LinkedList<Integer> originalPlan;
+        int trialCount = 0;
     }
 
     public ReplayPlanner(String inputTracePath, int stabilizationTh, boolean stabilizing) {
@@ -52,7 +53,7 @@ public class ReplayPlanner extends TraceBasedPlanner {
     @Override
     public void reportIntermediateStep(int eventIndex, DeviceInfo deviceInfo, AbstractUI abstractUI, Coverage coverage, boolean escaped, boolean blocked) {
         if (eventIndex != C.START) {
-            currentCoverage.add(coverage.methodCoverage, coverage.branchCoverage, abstractUI.id());
+            currentCoverage.add(coverage);
         }
     }
 
@@ -144,6 +145,13 @@ public class ReplayPlanner extends TraceBasedPlanner {
                     continue;
                 }
 
+                if (nextTrace.size() <= 2) {
+                    droppedSequenceCount++;
+                    droppedEventCount += (nextTrace.size() - 1);
+                    log(String.format("skipping trace (too short)"));
+                    continue;
+                }
+
                 LinkedList<Integer> p = PlanUtil.traceToPlan(nextTrace);
 
                 PlanInfo pInfo = new PlanInfo();
@@ -160,11 +168,15 @@ public class ReplayPlanner extends TraceBasedPlanner {
         if (!nextPlans.isEmpty()) {
             Plan p = new Plan();
             LinkedList<Integer> pp = nextPlans.removeFirst();
+            PlanInfo ppInfo = planInfo.get(pp);
 
-            p.expectedCoverage = planInfo.get(pp).c;
+            p.expectedCoverage = ppInfo.c;
             p.plan = pp;
+            ppInfo.trialCount++;
 
-            triedCandidateCount++;
+            if (ppInfo.trialCount == 1) {
+                triedCandidateCount++;
+            }
             return p;
         }
         else {
@@ -173,26 +185,30 @@ public class ReplayPlanner extends TraceBasedPlanner {
     }
 
     @Override
+    public Coverage getAlreadyCovered() {
+        return new Coverage();
+    }
+
+
+    @Override
     public void initializeImpl() {
         //nop
     }
 
     @Override
     public void intermediateDump(int id) {
+        super.intermediateDump(id);
+
         HistoryManager hm = HistoryManager.instance();
+        Coverage trialGain = Coverage.minus(currentCoverage, confirmedCoverage);
+
+        dumpCoverage("Replay", currentCoverage);
+        dumpCoverage("Replay:Confirmed", confirmedCoverage);
+        dumpCoverage("Replay:Plan:Mini:Trial", trialGain);
+
+        dumpCoverage("Trace", inputTraceCoverage);
 
         hm.periodStat("Replay:#TrueDeviation", trueDeviationCount);
-        hm.periodStat("Replay:#Screen", currentCoverage.screenCoverage.size());
-        hm.periodStat("Replay:#Branch", currentCoverage.branchCoverage.size());
-        hm.periodStat("Replay:#Method", currentCoverage.methodCoverage.size());
-
-        Coverage trialGain = Coverage.minus(currentCoverage, confirmedCoverage);
-        hm.periodStat("Replay:Plan:Mini:Trial:#Method", trialGain.methodCoverage.size());
-        hm.periodStat("Replay:Plan:Mini:Trial:#Branch", trialGain.branchCoverage.size());
-
-        hm.periodStat("Replay:Confirmed:#Screen", confirmedCoverage.screenCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Branch", confirmedCoverage.branchCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Method", confirmedCoverage.methodCoverage.size());
         hm.periodStat("Replay:Plan:Mini:#Tried Candidates", triedCandidateCount);
         hm.periodStat("Replay:Plan:#Selected Seq.", selectedSequenceCount);
         hm.periodStat("Replay:Plan:#Selected Event", selectedEventCount);
@@ -203,11 +219,9 @@ public class ReplayPlanner extends TraceBasedPlanner {
         hm.periodStat("Replay:Plan:#Dropped Event", inputTraceProfiler.droppedTraceEvents + inputTraceProfiler.droppedTailEvents + droppedEventCount);
         hm.periodStat("Replay:Plan:#Dropped Seq.", inputTraceProfiler.droppedTraces + droppedSequenceCount);
 
-        hm.periodStat("Trace:#Screen", inputTraceCoverage.screenCoverage.size());
-        hm.periodStat("Trace:#Branch", inputTraceCoverage.branchCoverage.size());
-        hm.periodStat("Trace:#Method", inputTraceCoverage.methodCoverage.size());
         hm.periodStat("Trace:#Event", inputTraceProfiler.events);
         hm.periodStat("Trace:#Seq.", inputTraceProfiler.traces);
+        hm.periodStat("Trace", inputTraceProfiler.events);
     }
 
     @Override

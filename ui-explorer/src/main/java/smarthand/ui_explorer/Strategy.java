@@ -46,4 +46,12 @@ public abstract class Strategy implements Logger {
     builder.append("]");
     logger.log(builder.toString());
   }
+
+  public static void dumpCoverage(String tag, Coverage c) {
+    HistoryManager hm = HistoryManager.instance();
+    hm.periodStat(tag + ":#Screen", c.screenCoverage.size());
+    hm.periodStat(tag + ":#Branch", c.getBranchCount());
+    hm.periodStat(tag + ":#Exception", c.getExceptionCount());
+    hm.periodStat(tag + ":#Method", c.methodCoverage.size());
+  }
 }

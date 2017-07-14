@@ -4,28 +4,29 @@ package smarthand.dynamic.coverage;
  * Created by wtchoi on 10/8/15.
  */
 
-import android.content.ComponentName;
-import android.content.Intent;
-import android.util.Log;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import android.os.Looper;
 
 public class Coverage {
   private static CoverageProxy coverageProxy;
 
+  private volatile static Looper mainLooper;
+  private static ThreadLocal<Looper> mainThreadCache = new ThreadLocal<Looper>();
   /**
    *
    * @param id Method identifier
    */
   public static void reportMethod(int id) {
     tryInitialize();
-    coverageProxy.reportMethod(id);
+    if (Looper.myLooper() == mainThreadCache.get()) {
+      coverageProxy.reportMethod(id);
+    }
   }
 
   public static void reportBranch(int bid) {
     tryInitialize();
-    coverageProxy.reportBranch(bid);
+    if (Looper.myLooper() == mainThreadCache.get()) {
+      coverageProxy.reportBranch(bid);
+    }
   }
 
   public static void hello() {
@@ -34,8 +35,13 @@ public class Coverage {
 
   private static void tryInitialize() {
     if (coverageProxy == null) {
+      mainLooper = Looper.getMainLooper();
       coverageProxy = new CoverageProxy();
       coverageProxy.start();
+    }
+
+    if (mainThreadCache.get() == null) {
+      mainThreadCache.set(mainLooper);
     }
   }
 

@@ -21,7 +21,7 @@ class LogServer implements Runnable {
   AtomicBoolean shutedDown = new AtomicBoolean(false);
   Thread runner;
 
-  private final static int pullingInterval = 100; //100 ms
+  private final static int pullingInterval = 50; //50 ms
 
   class Connection extends Thread {
     long timestamp;

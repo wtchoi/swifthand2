@@ -71,7 +71,7 @@ public class RecomposingPlanner extends TraceBasedPlanner {
         //plans.removePossibleFailures(failingPrefix);
         //no need to sort, because the order is preserved.
 
-        plans.removePlanInfo(plan);
+        plans.removePlanInfo(plan, "reportExecutionFailureImpl");
         currentCoverage = new Coverage(confirmedCoverage);
         expectedFinalCoverage = Coverage.add(confirmedCoverage, plans.getExpectedCoverageSum());
     }
@@ -87,9 +87,9 @@ public class RecomposingPlanner extends TraceBasedPlanner {
         selectedSequenceCount++;
         selectedEventCount += (t.size() - 1);
 
+        plans.removePlanInfo(plan, "reportExecutionSuccessImplExact");
         plans.filterPlansByCoverage(confirmedCoverage);
         plans.sortPlans(confirmedCoverage);
-        plans.removePlanInfo(plan);
 
         currentCoverage = new Coverage(confirmedCoverage);
         expectedFinalCoverage = Coverage.add(confirmedCoverage, plans.getExpectedCoverageSum());
@@ -98,14 +98,20 @@ public class RecomposingPlanner extends TraceBasedPlanner {
     @Override
     public void reportExecutionSuccessImplFlaky(LinkedList<Integer> plan, Trace resultingTrace, Coverage expectedCoverage) {
         PlanInfo p = plans.getPlanInfo(plan);
-        p.c = Coverage.intersect(expectedCoverage, resultingTrace.computeCoverage(true));
+        if (p.justSynthesized) {
+            p.c = Coverage.intersect(inputTraceCoverage, resultingTrace.computeCoverage(true));
+            p.justSynthesized = false;
+        }
+        else {
+            p.c = Coverage.intersect(expectedCoverage, resultingTrace.computeCoverage(true));
+        }
 
         if (p.c.size() > 0) {
             plans.registerPlan(plan, p);
             plans.sortPlans(confirmedCoverage);
         }
         else {
-            plans.removePlanInfo(plan);
+            plans.removePlanInfo(plan, "reportExecutionSuccessImplFlaky");
         }
 
         currentCoverage = new Coverage(confirmedCoverage);
@@ -175,6 +181,11 @@ public class RecomposingPlanner extends TraceBasedPlanner {
         log("Sorting plans: " + plans.remainingPlanCount());
         plans.sortPlans(new Coverage());
         expectedFinalCoverage = plans.getExpectedCoverageSum();
+    }
+
+    @Override
+    public Coverage getAlreadyCovered() {
+        return new Coverage(confirmedCoverage);
     }
 
     private ConcreteUI.CheckOption option = new ConcreteUI.CheckOption(true, true, true);
@@ -336,19 +347,16 @@ public class RecomposingPlanner extends TraceBasedPlanner {
 
     @Override
     public void intermediateDump(int id) {
+        super.intermediateDump(id);
+
         HistoryManager hm = HistoryManager.instance();
-
-        hm.periodStat("Replay:#Screen", currentCoverage.screenCoverage.size());
-        hm.periodStat("Replay:#Branch", currentCoverage.branchCoverage.size());
-        hm.periodStat("Replay:#Method", currentCoverage.methodCoverage.size());
-
         Coverage trialGain = Coverage.minus(currentCoverage, confirmedCoverage);
-        hm.periodStat("Replay:Plan:Mini:Trial:#Method", trialGain.methodCoverage.size());
-        hm.periodStat("Replay:Plan:Mini:Trial:#Branch", trialGain.branchCoverage.size());
 
-        hm.periodStat("Replay:Confirmed:#Screen", confirmedCoverage.screenCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Branch", confirmedCoverage.branchCoverage.size());
-        hm.periodStat("Replay:Confirmed:#Method", confirmedCoverage.methodCoverage.size());
+        dumpCoverage("Replay", currentCoverage);
+        dumpCoverage("Replay:Confirmed", confirmedCoverage);
+        dumpCoverage("Replay:Expected", expectedFinalCoverage);
+        dumpCoverage("Replay:Plan:Mini:Trial", trialGain);
+        dumpCoverage("Trace", inputTraceCoverage);
 
         hm.periodStat("Replay:Plan:Mini:#Trials.", trialCount);
         hm.periodStat("Replay:Plan:Mini:#Skipped Candidates FP", skippedCandidateCountFP);
@@ -358,13 +366,6 @@ public class RecomposingPlanner extends TraceBasedPlanner {
         hm.periodStat("Replay:Plan:#Selected Seq.", selectedSequenceCount);
         hm.periodStat("Replay:Plan:#Selected Event", selectedEventCount);
 
-        hm.periodStat("Replay:Expected:#Screen", expectedFinalCoverage.screenCoverage.size());
-        hm.periodStat("Replay:Expected:#Branch", expectedFinalCoverage.branchCoverage.size());
-        hm.periodStat("Replay:Expected:#Method", expectedFinalCoverage.methodCoverage.size());
-
-        hm.periodStat("Trace:#Screen", inputTraceCoverage.screenCoverage.size());
-        hm.periodStat("Trace:#Branch", inputTraceCoverage.branchCoverage.size());
-        hm.periodStat("Trace:#Method", inputTraceCoverage.methodCoverage.size());
         hm.periodStat("Trace:#Event", inputTraceProfiler.events);
         hm.periodStat("Trace:#Seq.", inputTraceProfiler.traces);    }
 
