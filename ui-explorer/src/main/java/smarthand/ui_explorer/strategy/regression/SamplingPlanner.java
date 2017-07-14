@@ -394,6 +394,10 @@ public class SamplingPlanner extends TraceBasedPlanner {
         return storeCurrentPlan || updateInChild;
     }
 
+    @Override
+    public Coverage getAlreadyCovered() {
+        return new Coverage();
+    }
 
     @Override
     public void intermediateDump(int id) {
