@@ -102,11 +102,11 @@ One can try to reduce such an execution trace to generate a small regression tes
 This can be done in three steps. The first step is to stabilize the original execution trace.
 
 ```
-./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/stabilized <DEVICE ID> 9090 240 sequence-stabilize 1 output/anymemo/sh/trace.json 3
+./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/stabilized <DEVICE ID> 9090 720 sequence-stabilize 1 output/anymemo/sh/trace.json 3
 ```
 
 The example command reexcute the trace recorded in the given trace file (trace.json) three times and remove non-replayable parts of the trace.
-Note we are using 240 seconds for time out. 
+Note we are using 720 seconds for time out. 
 The result of removing non-replayable parts will be stored in *output/anymemo/stabilized/minimized_trace.json* file.
 If three re-executions might not be enough to fully stabilize the trace, you can replace the last command line argument (3) to a higher number, say 6 or 8.
 
@@ -114,20 +114,20 @@ Once the trace has been stabilized, one can use two reduction steps: *eliminate-
 
 
 ```
-./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/eliminate-loop <DEVICE ID> 9090 720 eliminate-loop 1 output/anymemo/stabilized/minimized_trace.json 10
+./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/eliminate-loop <DEVICE ID> 9090 720 eliminate-loop 1 output/anymemo/stabilized/minimized_trace.json 4
 ```
 
 The above command executes the first phase of the DetReduce algorithm (eliminate-loop).
-It uses 720 seconds for time out, and it re-executes each candidate trace ten times (the last command line argument) to check if if is replayable.
+It uses 720 seconds for time out, and it re-executes each candidate trace four times (the last command line argument) to check if if is replayable.
 It takes the trace obtained from the stabilization pass (stabilized/minimized_trace.json).
 Once the first phase is finished, one can move to the second phase.
 
 ```
-./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/splicing <DEVICE ID> 9090 720 splicing 1 output/anymemo/eliminate-loop/minimized_trace.json 10 3
+./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/splicing <DEVICE ID> 9090 720 splicing 1 output/anymemo/eliminate-loop/minimized_trace.json 4 3
 ```
 
 The above command executes the second phase of the RetReduce algorithm (splicing).
-It uses 720 seconds for time out, re-executes each candidate trace ten times (the second argument from the end), 
+It uses 720 seconds for time out, re-executes each candidate trace four times (the second argument from the end), 
 and uses at most three trace fragments to produce a spliced trace (the last argument).
 It takes the trace obtained from the eliminate-loop pass (eliminate-loop/minimized_trace.json).
 The result of the second phase will be available in the *output/anymemo/splicing/minimized_trace.json* file.
