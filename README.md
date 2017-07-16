@@ -7,13 +7,14 @@ A GUI testing framework
 ### Step 1: Getting required packages
 #### Installing necessary packages
 Please install following packages. You can use a package manager,
-such as **apt-get** or **brew**, to install Maven, expect, and bash.
+such as **apt-get** or **brew**, to install Maven, expect, jq, and bash.
 
 - [JDK 8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html)
 - [Android SDK](http://developer.android.com/sdk/index.html#downloads) (recommend Android Studio)
 - [Maven](https://maven.apache.org/download.cgi)
 - [expect](http://www.nist.gov/el/msid/expect.cfm)
 - [bash](https://www.gnu.org/software/bash/)
+- [jq](https://stedolan.github.io)
 
 If you are using Android Studio, please execute Android Studio and install the Android SDK within Android Studio (Android studio will guide you to do so).
 
