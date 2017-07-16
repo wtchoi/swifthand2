@@ -22,7 +22,12 @@ export ANDROID_HOME=<ANDROID_HOME>
 export ANDROID_BUILD_TOOL=<ANDROID_HOME>/build-tools/<VERSION>
 export PATH=$PATH:$ANDROID_HOME/platform_tools:$ANDROID_HOME/tools
 ```
-<JAVA_HOME> should be the path to the root directory of JDK. Similarly, <ANDROID_HOME> should be the path to the root directory of Android SDK. 
+<JAVA_HOME> should be the path to the root directory of JDK. 
+Iv you are using OSX, you can try following command to set the JAVA_HOME environment variable. 
+```
+export JAVA_HOME="$(/usr/libexec/java_home)"
+```
+Similarly, <ANDROID_HOME> should be the path to the root directory of Android SDK. 
 If you installed Android SDK as a part of Android Studio in OSX, <ANDROID_HOME> will be /Users/&lt;LOGIN&gt;/Library/Android/sdk, where &lt;LOGIN&gt; is replaced by your login id. &lt;VERSION&gt; should be the version number of the Android build-tool installed in your system.
 You can check it by looking at the <ANDROID_HOME>/build-tools directory.
 
@@ -80,7 +85,7 @@ Once the application is instrumented, you can start UI testing using **run.sh** 
 The example command tests anymemo_10.7.1.apk
 on the device identified by device id <DEVICE ID> for 120 seconds
 using the sh (SwiftHand) algorithm.
-9090 indicates the tcp port number to be used during the testing, and 1 is
+9090 indicates the TCP port number to be used during the testing, and 1 is
 the random seed to be used by the testing algorithm.
 The testing results will be dumped to the ./output/anymemo/sh directory.
 To use a different algorithm,
@@ -105,7 +110,7 @@ This can be done in three steps. The first step is to stabilize the original exe
 ./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/stabilized <DEVICE ID> 9090 720 sequence-stabilize 1 output/anymemo/sh/trace.json 3
 ```
 
-The example command reexcute the trace recorded in the given trace file (trace.json) three times and remove non-replayable parts of the trace.
+The example command re-execute the trace recorded in the given trace file (trace.json) three times and remove non-replayable parts of the trace.
 Note we are using 720 seconds for time out. 
 The result of removing non-replayable parts will be stored in *output/anymemo/stabilized/minimized_trace.json* file.
 If three re-executions might not be enough to fully stabilize the trace, you can replace the last command line argument (3) to a higher number, say 6 or 8.
@@ -126,7 +131,7 @@ Once the first phase is finished, one can move to the second phase.
 ./run.sh apps/inst/anymemo_10.7.1.apk output/anymemo/splicing <DEVICE ID> 9090 720 splicing 1 output/anymemo/eliminate-loop/minimized_trace.json 4 3
 ```
 
-The above command executes the second phase of the RetReduce algorithm (splicing).
+The above command executes the second phase of the DetReduce algorithm (splicing).
 It uses 720 seconds for time out, re-executes each candidate trace four times (the second argument from the end), 
 and uses at most three trace fragments to produce a spliced trace (the last argument).
 It takes the trace obtained from the eliminate-loop pass (eliminate-loop/minimized_trace.json).
