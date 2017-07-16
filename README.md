@@ -62,9 +62,7 @@ Please check the connectivity using **adb devices** command. If everything is pr
 List of devices attached
 01c0a1bcda138dd9	device
 ```
-, where "01c0a1bcda138dd9" is replaced with your device id. If you are using an emulator, you will see "emulator" instead of "device".
-
-
+, where "01c0a1bcda138dd9" is replaced with your device id. If you are using an emulator, you will see "emulator" instead of "device". If the device is connected to the computer for the first time, you will see *unauthorized* instead of *device* on the screen of your computer, and the device will show a pop up message asking for the USB-debugging permission. Please give the permission by touching *OK* button. An emulated device does not have this issue, because it allows USB-debugging by default.
 
 ### Step 4: Execution
 ###### Instrumentation
