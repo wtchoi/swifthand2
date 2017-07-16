@@ -14,6 +14,7 @@ such as **apt-get** or **brew**, to install Maven, expect, and bash.
 - [expect](http://www.nist.gov/el/msid/expect.cfm)
 - [bash](https://www.gnu.org/software/bash/)
 
+If you are using Android Studio, please execute Android Studio and install the Android SDK within Android Studio (Android studio will guide you to do so).
 Once packages are installed, you need to set few environment variables:
 
 ```
