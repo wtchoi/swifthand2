@@ -24,7 +24,7 @@ Once packages are installed, you need to set few environment variables:
 export JAVA_HOME=<JAVA_HOME>
 export ANDROID_HOME=<ANDROID_HOME>
 export ANDROID_BUILD_TOOL=<ANDROID_HOME>/build-tools/<VERSION>
-export PATH=$PATH:$ANDROID_HOME/platform_tools:$ANDROID_HOME/tools
+export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
 ```
 <JAVA_HOME> should be the path to the root directory of JDK. 
 Iv you are using OSX, you can try following command to set the JAVA_HOME environment variable. 
