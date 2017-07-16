@@ -5,6 +5,7 @@ A GUI testing framework
 ## Execution Guide
 
 ### Step 1: Getting required packages
+#### Installing necessary packages
 Please install following packages. You can use a package manager,
 such as **apt-get** or **brew**, to install Maven, expect, and bash.
 
@@ -15,6 +16,8 @@ such as **apt-get** or **brew**, to install Maven, expect, and bash.
 - [bash](https://www.gnu.org/software/bash/)
 
 If you are using Android Studio, please execute Android Studio and install the Android SDK within Android Studio (Android studio will guide you to do so).
+
+#### Setting environment variables
 Once packages are installed, you need to set few environment variables:
 
 ```
