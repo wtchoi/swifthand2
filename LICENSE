@@ -1,4 +1,4 @@
-Software name: Android testing automation framework (ATAF)
+Software name: SwiftHand2, an Android testing automation framework
 Version: 0.1
 
 Copyright (c) 2017 The Regenst of the University of California.
@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Libraries:
 
-The ATAF includes a number of subcomponents with separate copyright notices
+SwiftHand2 includes a number of subcomponents with separate copyright notices
 and license terms. Your use of source code for these subcomponents is subject
 to terms and condition of following licenses.
 
@@ -51,3 +51,7 @@ For the AXML component:
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+For the Soot component follows GNU Lesser General Public License.
+Check the following link for details:
+https://github.com/Sable/soot/blob/develop/COPYING-LESSER.txt
